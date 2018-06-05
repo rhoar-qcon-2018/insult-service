@@ -1,4 +1,4 @@
-package com.redhat.qcon;
+package com.redhat.qcon.insult;
 
 import io.reactivex.Single;
 import io.vertx.config.ConfigRetrieverOptions;

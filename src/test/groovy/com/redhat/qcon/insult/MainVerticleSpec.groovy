@@ -1,4 +1,4 @@
-package com.redhat.qcon
+package com.redhat.qcon.insult
 
 import io.vertx.core.Future
 import io.vertx.core.Vertx
@@ -22,7 +22,7 @@ class MainVerticleSpec extends Specification {
             fut.setHandler({ res ->
                 async.evaluate {
                     res.succeeded() // (4)
-                    vertx.getOrCreateContext().config().hasProperty('noun') // (5)
+                    vertx.getOrCreateContext().config().hasProperty('insult') // (5)
                     vertx.getOrCreateContext().config().hasProperty('adjective') // (6)
                     vertx.getOrCreateContext().config().hasProperty('http') // (7)
                 }
@@ -30,5 +30,6 @@ class MainVerticleSpec extends Specification {
 
         cleanup: 'Await the async operations'  // (8)
             async.await(3600)
+            vertx.close()
     }
 }
