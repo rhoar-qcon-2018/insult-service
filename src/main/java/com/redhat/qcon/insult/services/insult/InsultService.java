@@ -1,5 +1,6 @@
 package com.redhat.qcon.insult.services.insult;
 
+import io.vertx.codegen.annotations.Fluent;
 import io.vertx.codegen.annotations.ProxyGen;
 import io.vertx.codegen.annotations.VertxGen;
 import io.vertx.core.AsyncResult;
@@ -32,5 +33,6 @@ public interface InsultService {
      * @param insult An insult made up of 2 adjectives and a noun
      * @param insultPublishHandler A {@link Handler} callback for the results
      */
-    void publish(JsonObject insult, Handler<AsyncResult<Void>> insultPublishHandler);
+    @Fluent
+    InsultService publish(JsonObject insult, Handler<AsyncResult<Void>> insultPublishHandler);
 }

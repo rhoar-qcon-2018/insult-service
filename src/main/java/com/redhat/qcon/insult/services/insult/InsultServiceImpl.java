@@ -12,6 +12,8 @@ import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.HttpResponse;
 import io.vertx.reactivex.ext.web.client.WebClient;
+import org.apache.http.client.HttpResponseException;
+import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
 
@@ -112,13 +114,19 @@ public class InsultServiceImpl implements InsultService {
     }
 
     /**
-     * The the {@link KafkaService} event bus proxy to make calls to the Kafka microservice
+     * Use the {@link KafkaService} event bus proxy to make calls to the Kafka microservice
      * @param insult An insult made up of 2 adjectives and a noun
      * @param handler A handler to be called
      */
     @Override
-    public void publish(JsonObject insult, Handler<AsyncResult<Void>> handler) {
-        kafka.rxPublish(insult).toObservable();
+    public InsultService publish(JsonObject insult, Handler<AsyncResult<Void>> handler) {
+        Future<Void> fut = Future.future();
+        handler.handle(fut);
+        kafka.rxPublish(insult)
+                .toObservable()
+                .doOnError(fut::fail)
+                .subscribe(v -> fut.complete());
+        return this;
     }
 
     /**
