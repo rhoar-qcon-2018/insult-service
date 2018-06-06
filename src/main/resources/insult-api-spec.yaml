@@ -1,0 +1,76 @@
+openapi: 3.0.0
+info:
+  version: "1.0.5"
+  title: 'Insult Service'
+  description: 'API for Elizabethan Insult Generator Microservices'
+tags:
+  - name: insult
+    description: An Elizabethan derrogatory insult
+paths:
+  /health:
+    get:
+      summary: Get the health of the service
+      description: 'Returns an HTTP response code and a JSON document detailing the current health status of the service'
+      operationId: health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/health'
+        '500':
+          description: 'Server error'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/health'
+  /insult:
+    get:
+      tags:
+        - insult
+      summary: Get an Insult
+      description: ''
+      operationId: getInsult
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/insult'
+components:
+  schemas:
+    health:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+        details:
+          type: string
+        error:
+          type: string
+    insult:
+      type: object
+      required:
+      - noun
+      - adj1
+      - adj2
+      properties:
+        noun:
+          type: string
+        adj1:
+          type: string
+        adj2:
+          type: string
+        name:
+          type: string
+    insultrequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
