@@ -48,25 +48,22 @@ components:
       properties:
         status:
           type: string
-        details:
+        noun:
           type: string
-        error:
+        adj:
           type: string
     insult:
       type: object
       required:
       - noun
-      - adj1
-      - adj2
+      - adj
       properties:
         noun:
           type: string
-        adj1:
-          type: string
-        adj2:
-          type: string
-        name:
-          type: string
+        adj:
+          type: array
+          items:
+            type: string
     insultrequest:
       type: object
       required:
