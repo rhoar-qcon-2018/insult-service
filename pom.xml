@@ -11,7 +11,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
         <!-- vert.x properties -->
-        <vertx.version>3.5.1</vertx.version>
+        <vertx.version>3.5.2</vertx.version>
         <vertx.verticle>com.redhat.qcon.insult.MainVerticle</vertx.verticle>
         <!-- Maven plugins -->
         <vertx-maven-plugin.version>1.0.13</vertx-maven-plugin.version>
@@ -31,6 +31,10 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web-api-contract</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-circuit-breaker</artifactId>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
