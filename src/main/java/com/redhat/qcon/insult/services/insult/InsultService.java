@@ -29,6 +29,12 @@ public interface InsultService {
     void getREST(Handler<AsyncResult<JsonObject>> insultGetHandler);
 
     /**
+     * Check the health of this service
+     * @param healthCheckHandler A {@link Handler} callback for the results
+     */
+    void check(Handler<AsyncResult<JsonObject>> healthCheckHandler);
+
+    /**
      * Publish a "liked" insult to the Kafka queue to be distributed to all of the other clusters
      * @param insult An insult made up of 2 adjectives and a noun
      * @param insultPublishHandler A {@link Handler} callback for the results

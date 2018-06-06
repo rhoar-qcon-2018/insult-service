@@ -24,8 +24,8 @@ public class InsultServiceImpl implements InsultService {
     Vertx vertx;
     WebClient nounClient, adjClient;
     KafkaService kafka;
-    private final CircuitBreaker adjBreaker;
-    private final CircuitBreaker nounBreaker;
+    CircuitBreaker adjBreaker;
+    CircuitBreaker nounBreaker;
 
     /**
      * Default constructor
@@ -177,5 +177,26 @@ public class InsultServiceImpl implements InsultService {
         } else {
             return Maybe.just(r);
         }
+    }
+
+    /**
+     * Check the health of this service
+     * @param healthCheckHandler A {@link Handler} callback for the results
+     */
+    @Override
+    public void check(Handler<AsyncResult<JsonObject>> healthCheckHandler) {
+        JsonObject status = new JsonObject();
+
+        String nounState = nounBreaker.state().name();
+        String adjState = adjBreaker.state().name();
+        status.put("noun", nounState)
+                .put("adj", adjState);
+
+        if (nounState.contentEquals("OPEN") || adjState.contentEquals("OPEN")) {
+            status.put("status", "OK");
+        } else {
+            status.put("status", "DEGRADED");
+        }
+        healthCheckHandler.handle(Future.succeededFuture(status));
     }
 }

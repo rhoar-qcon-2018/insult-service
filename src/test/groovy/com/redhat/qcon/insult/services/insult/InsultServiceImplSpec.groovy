@@ -4,6 +4,7 @@ import io.specto.hoverfly.junit.core.Hoverfly
 import io.specto.hoverfly.junit.core.SimulationSource
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
+import io.vertx.reactivex.circuitbreaker.CircuitBreaker
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -72,6 +73,10 @@ class InsultServiceImplSpec extends Specification {
                                         APPLICATION_JSON.toString())
                                     .withDelay(1, TimeUnit.SECONDS)))
 
+    @Shared
+    JsonObject httpClientConfig
+
+
     def setupSpec() {
         System.setProperty('org.slf4j.simpleLogger.defaultLogLevel', 'debug')
         def hoverflyConfig = localConfigs().proxyLocalHost().captureAllHeaders()
@@ -82,6 +87,20 @@ class InsultServiceImplSpec extends Specification {
                 .put('port', hoverfly.hoverflyConfig.proxyPort)
                 .put('type', 'HTTP')
         vertx = Vertx.vertx()
+
+        httpClientConfig = new JsonObject()
+                .put('noun',
+                new JsonObject().put('host', 'localhost')
+                        .put('ssl', false)
+                        .put('port', 80)
+                        .put('proxyOptions', proxyOptions)
+            )
+                .put('adjective',
+                new JsonObject().put('host', 'localhost')
+                        .put('ssl', false)
+                        .put('port', 80)
+                        .put('proxyOptions', proxyOptions)
+            )
     }
 
     def setup() {
@@ -90,22 +109,7 @@ class InsultServiceImplSpec extends Specification {
 
     @Unroll
     def 'Test getting a noun: #description'() {
-        setup: 'Http Client Config to work with Hoverfly'
-            def httpClientConfig = new JsonObject()
-                    .put('noun',
-                    new JsonObject().put('host', 'localhost')
-                            .put('ssl', false)
-                            .put('port', 80)
-                            .put('proxyOptions', proxyOptions)
-            )
-                    .put('adjective',
-                    new JsonObject().put('host', 'localhost')
-                            .put('ssl', false)
-                            .put('port', 80)
-                            .put('proxyOptions', proxyOptions)
-            )
-
-        and: 'Create the service under test'
+        setup: 'Create the service under test'
             InsultServiceImpl underTest = new InsultServiceImpl(vertx, httpClientConfig)
 
         and: 'AsyncConditions'
@@ -133,6 +137,38 @@ class InsultServiceImplSpec extends Specification {
             GET_RESP_TWO   | 'Server error'    || true      | '[failure]' | '[failure]'
             GET_RESP_THREE | 'Slow adj reply'  || true      | 'adjective' | '[failure]'
             GET_RESP_FOUR  | 'Slow noun reply' || true      | '[failure]' | 'noun'
+    }
+
+    def "Test health check endpoint: #description"() {
+        setup: 'Create Mocks for circuit breakers'
+            def adjBreaker = Mock(CircuitBreaker)
+            def nounBreaker = Mock(CircuitBreaker)
+
+        and: 'Create an instance of the service under test'
+            def underTest = new InsultServiceImpl(vertx, httpClientConfig)
+
+        and: 'Replace the circuit breakers with Mocks'
+            underTest.adjBreaker = adjBreaker
+            underTest.nounBreaker = nounBreaker
+
+        and: 'An instance of AsyncConditions'
+            def conds = new AsyncConditions(1)
+
+        expect: 'We call the health check method'
+            underTest.check({ res ->
+                conds.evaluate {
+                    assert res.succeeded() == status
+                    assert res.result().getString("noun") == noun
+                    assert res.result().getString("adj") == adjective
+                }
+            })
+
+        where: 'The following data table is used.'
+            description            | status     | noun      | adjective
+            'Both breakers closed' | true       | 'CLOSED'  | 'CLOSED'
+            'Adj breaker open'     | false      | 'CLOSED'  | 'OPEN'
+            'Noun breaker open'    | false      | 'OPEN'    | 'CLOSED'
+            'Both breakers open'   | false      | 'OPEN'    | 'OPEN'
     }
 
     def cleanupSpec() {
