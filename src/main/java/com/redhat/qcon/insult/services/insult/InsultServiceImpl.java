@@ -1,27 +1,31 @@
 package com.redhat.qcon.insult.services.insult;
 
 import com.redhat.qcon.kafka.services.reactivex.KafkaService;
+import io.reactivex.Maybe;
+import io.vertx.circuitbreaker.CircuitBreakerOptions;
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClientOptions;
+import io.vertx.reactivex.circuitbreaker.CircuitBreaker;
 import io.vertx.reactivex.core.CompositeFuture;
 import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.HttpResponse;
 import io.vertx.reactivex.ext.web.client.WebClient;
-import org.apache.http.client.HttpResponseException;
-import org.jetbrains.annotations.NotNull;
 
 import static java.lang.String.format;
 
 public class InsultServiceImpl implements InsultService {
 
+    public static final int HTTP_CLIENT_TIMEOUT = 500;
     Vertx vertx;
     WebClient nounClient, adjClient;
     KafkaService kafka;
+    private final CircuitBreaker adjBreaker;
+    private final CircuitBreaker nounBreaker;
 
     /**
      * Default constructor
@@ -36,11 +40,28 @@ public class InsultServiceImpl implements InsultService {
         JsonObject adjConfig = config.getJsonObject("adjective");
         this.vertx = Vertx.newInstance(vertx);
         WebClientOptions nounClientOpts = new WebClientOptions(nounConfig)
-                .setLogActivity(true);
+                .setLogActivity(false);
         WebClientOptions adjClientOpts = new WebClientOptions(adjConfig)
-                .setLogActivity(true);
+                .setLogActivity(false);
         nounClient = WebClient.create(this.vertx, nounClientOpts);
         adjClient = WebClient.create(this.vertx, adjClientOpts);
+
+        CircuitBreakerOptions breakerOpts = new CircuitBreakerOptions()
+                                                    .setFallbackOnFailure(true)
+                                                    .setMaxFailures(3)
+                                                    .setMaxRetries(3)
+                                                    .setResetTimeout(15000)
+                                                    .setTimeout(250);
+
+        adjBreaker = CircuitBreaker
+                        .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
+                        .openHandler(t -> new JsonObject().put("adj", "[open]"))
+                        .fallback(t -> new JsonObject().put("adj", "[failure]"));
+
+        nounBreaker = CircuitBreaker
+                        .create("nounBreaker", Vertx.newInstance(vertx), breakerOpts)
+                        .openHandler(t -> new JsonObject().put("noun", "[open]"))
+                        .fallback(t -> new JsonObject().put("noun", "[failure]"));
     }
 
     /**
@@ -52,7 +73,7 @@ public class InsultServiceImpl implements InsultService {
         // Request 2 adjectives and a noun in parallel, then handle the results
         CompositeFuture.all(getNoun(), getAdjective(), getAdjective())
                 .rxSetHandler()
-                .map(InsultServiceImpl::mapResultToError)   // Map errors to an exception
+                .flatMapMaybe(InsultServiceImpl::mapResultToError)   // Map errors to an exception
                 .map(InsultServiceImpl::buildInsult)        // Combine the 3 results into a single JSON object
                 .onErrorReturn(Future::failedFuture)        // When an exception happens, map it to a failed future
                 .subscribe(insultGetHandler::handle);       // Map successful JSON to a succeeded future
@@ -68,10 +89,10 @@ public class InsultServiceImpl implements InsultService {
         JsonArray adjectives = new JsonArray();
 
         // Because there is no garanteed order of the returned futures, we need to parse the results
-        for (int i=0; i<=cf.size(); i++) {
+        for (int i=0; i<cf.size(); i++) {
             JsonObject item = cf.resultAt(i);
-            if (item.containsKey("adjective")) {
-                adjectives.add(item.getString("adjective"));
+            if (item.containsKey("adj")) {
+                adjectives.add(item.getString("adj"));
             } else {
                 insult.put("noun", item.getString("noun"));
             }
@@ -86,15 +107,13 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain an adjective on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getAdjective() {
-        io.vertx.reactivex.core.Future<JsonObject> fut = io.vertx.reactivex.core.Future.future();
-        adjClient.get("/api/v1/adjective")
-                .timeout(3000)
-                .rxSend()
-                .map(InsultServiceImpl::mapStatusToError)
-                .map(HttpResponse::bodyAsJsonObject)
-                .doOnError(fut::fail)
-                .subscribe(fut::complete);
-        return fut;
+        return adjBreaker.execute(fut ->
+            adjClient.get("/api/v1/adjective")
+                    .timeout(HTTP_CLIENT_TIMEOUT)
+                    .rxSend()
+                    .flatMapMaybe(InsultServiceImpl::mapStatusToError)
+                    .map(HttpResponse::bodyAsJsonObject)
+                    .subscribe(fut::complete, fut::fail));
     }
 
     /**
@@ -102,15 +121,13 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain a noun on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getNoun() {
-        io.vertx.reactivex.core.Future<JsonObject> fut = io.vertx.reactivex.core.Future.future();
-        nounClient.get("/api/v1/noun")
-                .timeout(3000)
-                .rxSend()
-                .map(InsultServiceImpl::mapStatusToError)
-                .map(HttpResponse::bodyAsJsonObject)
-                .doOnError(fut::fail)
-                .subscribe(fut::complete);
-        return fut;
+        return nounBreaker.execute(fut ->
+            nounClient.get("/api/v1/noun")
+                    .timeout(HTTP_CLIENT_TIMEOUT)
+                    .rxSend()
+                    .flatMapMaybe(InsultServiceImpl::mapStatusToError)
+                    .map(HttpResponse::bodyAsJsonObject)
+                    .subscribe(fut::complete, fut::fail));
     }
 
     /**
@@ -132,27 +149,33 @@ public class InsultServiceImpl implements InsultService {
     /**
      * When the {@link CompositeFuture} is failed, throws an exception in order to interrups the RxJava stream processing
      * @param res The {@link CompositeFuture} to be processed
-     * @return The same as the input as long as the {@link CompositeFuture} was succeeded
-     * @throws Exception If the {@link CompositeFuture} is failed
+     * @return The same as the input if the {@link CompositeFuture} was succeeded
      */
-    private static final CompositeFuture mapResultToError(CompositeFuture res) throws Exception {
+    private static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) {
         if (res.succeeded()) {
-            return res;
+            return Maybe.just(res);
+        } else {
+            return Maybe.error(res.cause());
         }
-        throw new Exception(res.cause());
+
     }
 
     /**
-     * Maps HTTP error status codes to exceptions to interrupt the RxJava stream processing and trigger an error handler
+     * Maps HTTP error status codes to exceptions to interrupt the RxJava stream
+     * processing and trigger an error handler
      * @param r The {@link HttpResponse} to be checked
-     * @return The same as the input if the response code is 2XX
-     * @throws Exception If the {@link HttpResponse} code is 4XX or 5XX
+     * @return The same as the input if the response code is 2XX, otherwise an Exception
      */
-    private static final HttpResponse<Buffer> mapStatusToError(HttpResponse<Buffer> r) throws Exception {
+    private static final Maybe<HttpResponse<Buffer>> mapStatusToError(HttpResponse<Buffer> r) {
         if (r.statusCode()>=400) {
-            throw new Exception(format("%d: %s\n%s", r.statusCode(), r.statusMessage(), r.bodyAsString()));
+            String errorMessage = format("%d: %s\n%s",
+                    r.statusCode(),
+                    r.statusMessage(),
+                    r.bodyAsString());
+            Exception clientException = new Exception(errorMessage);
+            return Maybe.error(clientException);
         } else {
-            return r;
+            return Maybe.just(r);
         }
     }
 }
