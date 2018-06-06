@@ -32,28 +32,45 @@ class InsultServiceImplSpec extends Specification {
     static final String NOUN_RESPONSE_BODY_ONE = new JsonObject().put('noun', 'noun').encodePrettily()
     static final String ADJ_RESPONSE_BODY_ONE = new JsonObject().put('adj', 'adjective').encodePrettily()
 
-    static final SimulationSource GET_RESPONSE_ONE = dsl(
+    static final SimulationSource GET_RESP_ONE = dsl(
             service('localhost')
                     .get("/api/v1/noun")
-                    .willReturn(success(NOUN_RESPONSE_BODY_ONE, APPLICATION_JSON.toString())),
+                    .willReturn(success(NOUN_RESPONSE_BODY_ONE,
+                                        APPLICATION_JSON.toString())),
             service('localhost')
                     .get("/api/v1/adjective")
-                    .willReturn(success(ADJ_RESPONSE_BODY_ONE, APPLICATION_JSON.toString())))
+                    .willReturn(success(ADJ_RESPONSE_BODY_ONE,
+                                        APPLICATION_JSON.toString())))
 
-    static final SimulationSource GET_RESPONSE_TWO = dsl(
+    static final SimulationSource GET_RESP_TWO = dsl(
             service('localhost')
                     .get("/api/v1/noun")
+                    .willReturn(serverError()),
+            service('localhost')
+                    .get("/api/v1/adjective")
                     .willReturn(serverError()))
 
-    static final SimulationSource GET_RESPONSE_THREE = dsl(
-            service('localhost')
-                    .andDelay(10, TimeUnit.SECONDS).forAll(),
+    static final SimulationSource GET_RESP_THREE = dsl(
             service('localhost')
                     .get('/api/v1/noun')
-                    .willReturn(success(NOUN_RESPONSE_BODY_ONE, APPLICATION_JSON.toString())),
+                    .willReturn(success(NOUN_RESPONSE_BODY_ONE,
+                                        APPLICATION_JSON.toString())
+                                    .withDelay(1, TimeUnit.SECONDS)),
             service('localhost')
                     .get("/api/v1/adjective")
-                    .willReturn(success(ADJ_RESPONSE_BODY_ONE, APPLICATION_JSON.toString())))
+                    .willReturn(success(ADJ_RESPONSE_BODY_ONE,
+                                        APPLICATION_JSON.toString())))
+
+    static final SimulationSource GET_RESP_FOUR = dsl(
+            service('localhost')
+                    .get('/api/v1/noun')
+                    .willReturn(success(NOUN_RESPONSE_BODY_ONE,
+                                        APPLICATION_JSON.toString())),
+            service('localhost')
+                    .get("/api/v1/adjective")
+                    .willReturn(success(ADJ_RESPONSE_BODY_ONE,
+                                        APPLICATION_JSON.toString())
+                                    .withDelay(1, TimeUnit.SECONDS)))
 
     def setupSpec() {
         System.setProperty('org.slf4j.simpleLogger.defaultLogLevel', 'debug')
@@ -73,45 +90,49 @@ class InsultServiceImplSpec extends Specification {
 
     @Unroll
     def 'Test getting a noun: #description'() {
-        setup: 'Configure service under test'
-            InsultServiceImpl underTest = new InsultServiceImpl(vertx,
-                new JsonObject()
-                        .put('noun',
-                            new JsonObject().put('host', 'localhost')
-                                    .put('ssl', false)
-                                    .put('port', 80)
-                                    .put('proxyOptions', proxyOptions)
-                        )
-                        .put('adjective',
-                            new JsonObject().put('host', 'localhost')
-                                    .put('ssl', false)
-                                    .put('port', 80)
-                                    .put('proxyOptions', proxyOptions)
-                        )
-                )
+        setup: 'Http Client Config to work with Hoverfly'
+            def httpClientConfig = new JsonObject()
+                    .put('noun',
+                    new JsonObject().put('host', 'localhost')
+                            .put('ssl', false)
+                            .put('port', 80)
+                            .put('proxyOptions', proxyOptions)
+            )
+                    .put('adjective',
+                    new JsonObject().put('host', 'localhost')
+                            .put('ssl', false)
+                            .put('port', 80)
+                            .put('proxyOptions', proxyOptions)
+            )
+
+        and: 'Create the service under test'
+            InsultServiceImpl underTest = new InsultServiceImpl(vertx, httpClientConfig)
+
         and: 'AsyncConditions'
-            def async = new AsyncConditions(1)
+            def conds = new AsyncConditions(1)
+
         and: 'Service virtualization has been configured'
             hoverfly.simulate(simulation)
 
-        expect: 'The appropriate response to REST calls'
+        and: 'We call the Service Proxy'
             underTest.getREST({ res ->
-                async.evaluate {
-                    if (responseCode == 200) {
-                        res.succeeded()
-                        res.result().toString() == body
-                    } else {
-                        res.failed()
-                    }
+                conds.evaluate {
+                    assert succeeded == res.succeeded()
+                    def body = res?.result()
+                    assert body?.getJsonArray('adjectives')?.getAt(0) == adjective
+                    assert body?.getString('noun') == noun
                 }
             })
-            async.await(15)
+
+        expect: 'The appropriate response to REST calls'
+            conds.await(10)
 
         where: 'The following data is applied'
-            simulation         | description    || responseCode | body
-            GET_RESPONSE_ONE   | 'Happy path'   || 200          | NOUN_RESPONSE_BODY_ONE
-            GET_RESPONSE_TWO   | 'Server error' || 500          | ""
-            GET_RESPONSE_THREE | 'Slow reply'   || 200          | NOUN_RESPONSE_BODY_ONE
+            simulation     | description       || succeeded | adjective   | noun
+            GET_RESP_ONE   | 'Happy path'      || true      | 'adjective' | 'noun'
+            GET_RESP_TWO   | 'Server error'    || true      | '[failure]' | '[failure]'
+            GET_RESP_THREE | 'Slow adj reply'  || true      | 'adjective' | '[failure]'
+            GET_RESP_FOUR  | 'Slow noun reply' || true      | '[failure]' | 'noun'
     }
 
     def cleanupSpec() {
