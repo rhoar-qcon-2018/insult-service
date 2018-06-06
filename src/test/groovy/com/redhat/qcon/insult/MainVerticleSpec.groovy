@@ -2,6 +2,7 @@ package com.redhat.qcon.insult
 
 import io.vertx.core.Future
 import io.vertx.core.Vertx
+import io.vertx.core.json.JsonObject
 import spock.lang.Specification
 import spock.util.concurrent.AsyncConditions
 
@@ -21,10 +22,11 @@ class MainVerticleSpec extends Specification {
         then: 'Expect that the correct configuration is found and loaded'
             fut.setHandler({ res ->
                 async.evaluate {
-                    res.succeeded() // (4)
-                    vertx.getOrCreateContext().config().hasProperty('insult') // (5)
-                    vertx.getOrCreateContext().config().hasProperty('adjective') // (6)
-                    vertx.getOrCreateContext().config().hasProperty('http') // (7)
+                    def config = vertx.getOrCreateContext().config()
+                    assert res.succeeded() // (4)
+                    assert config.hasProperty('insult') // (5)
+                    assert config.hasProperty('adjective') // (6)
+                    assert config.hasProperty('http') // (7)
                 }
             })
 
