@@ -6,16 +6,6 @@ pipeline {
     PROJECT_NAME = 'insult-service'
   }
   stages {
-    stage('Compile') {
-      steps {
-        sh 'mvn compile'
-      }
-    }
-    stage('Test') {
-      steps {
-        sh 'mvn test'
-      }
-    }
     stage('OWASP Dependency Check') {
       steps {
         agent {
@@ -24,15 +14,32 @@ pipeline {
         sh 'mvn dependency-check:check'
       }
     }
+    stage('Compile & Test') {
+      steps {
+        sh 'mvn package vertx:package'
+      }
+    }
+    stage('Ensure SonarQube Config') {
+      when {
+        expression {
+          sh "curl -u \"${SONAR_AUTH_TOKEN}:\" https://sonarqube:9000-/api/webhooks/list | grep Jenkins"
+        }
+      }
+      steps {
+        withSonarQubeEnv() {
+          sh "curl -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" https://sonarqube:9000/api/webhooks/update"
+        }
+      }
+    }
     stage('Quality Analysis') {
       steps {
         script {
           withSonarQubeEnv() {
             sh 'mvn sonar:sonar'
-          }
-          def qualitygate = waitForQualityGate()
-          if (qualitygate.status != "OK") {
-             error "Pipeline aborted due to quality gate failure: ${qualitygate.status}"
+            def qualitygate = waitForQualityGate()
+            if (qualitygate.status != "OK") {
+              error "Pipeline aborted due to quality gate failure: ${qualitygate.status}"
+            }
           }
         }
       }
