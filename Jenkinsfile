@@ -6,60 +6,117 @@ pipeline {
     PROJECT_NAME = 'insult-service'
   }
   stages {
-    stage('OWASP Dependency Check') {
-      steps {
-        agent {
-          label "jenkins-slave-mvn"
+    stage('Quality And Security') {
+      parallel {
+        stage('OWASP Dependency Check') {
+          steps {
+            agent {
+              label "jenkins-slave-mvn"
+            }
+            sh 'mvn dependency-check:check'
+          }
         }
-        sh 'mvn dependency-check:check'
-      }
-    }
-    stage('Compile & Test') {
-      steps {
-        sh 'mvn package vertx:package'
-      }
-    }
-    stage('Ensure SonarQube Webhook is configured') {
-      when {
-        not {
-          expression {
+        stage('Compile & Test') {
+          steps {
+            sh 'mvn package vertx:package'
+          }
+        }
+        stage('Ensure SonarQube Webhook is configured') {
+          when {
+            not {
+              expression {
+                withSonarQubeEnv('sonar') {
+                  sh "curl -u \"${SONAR_AUTH_TOKEN}:\" http://sonarqube:9000/api/webhooks/list | grep Jenkins"
+                }
+              }
+            }
+          }
+          steps {
             withSonarQubeEnv('sonar') {
-              sh "curl -u \"${SONAR_AUTH_TOKEN}:\" http://sonarqube:9000/api/webhooks/list | grep Jenkins"
+              sh "curl -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" http://sonarqube:9000/api/webhooks/update"
             }
           }
         }
-      }
-      steps {
-        withSonarQubeEnv('sonar') {
-          sh "curl -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" http://sonarqube:9000/api/webhooks/update"
-        }
-      }
-    }
-    stage('Quality Analysis') {
-      steps {
-        script {
-          withSonarQubeEnv('sonar') {
-            sh 'mvn sonar:sonar'
-            def qualitygate = waitForQualityGate()
-            if (qualitygate.status != "OK") {
-              error "Pipeline aborted due to quality gate failure: ${qualitygate.status}"
+        stage('Quality Analysis') {
+          steps {
+            script {
+              withSonarQubeEnv('sonar') {
+                sh 'mvn sonar:sonar'
+                def qualitygate = waitForQualityGate()
+                if (qualitygate.status != "OK") {
+                  error "Pipeline aborted due to quality gate failure: ${qualitygate.status}"
+                }
+              }
             }
           }
         }
       }
     }
-    stage('Create Binary BuildConfig') {
-      when {
-        expression {
-          openshift.withCluster() {
-            return !openshift.selector('bc', PROJECT_NAME).exists()
+    stage('OpenShift Configuration') {
+      parallel {
+
+        stage('Create Binary BuildConfig') {
+          when {
+            expression {
+              openshift.withCluster() {
+                return !openshift.selector('bc', PROJECT_NAME).exists()
+              }
+            }
+          }
+          steps {
+            script {
+              openshift.withCluster() {
+                openshift.newBuild("--name=${PROJECT_NAME}", "--image-stream=redhat-openjdk18-openshift:1.1", "--binary")
+              }
+            }
           }
         }
-      }
-      steps {
-        script {
-          openshift.withCluster() {
-            openshift.newBuild("--name=${PROJECT_NAME}", "--image-stream=redhat-openjdk18-openshift:1.1", "--binary")
+        stage('Create Test Deployment') {
+          when {
+            expression {
+              openshift.withCluster() {
+                def ciProject = openshift.project()
+                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-test/)
+                openshift.withProject(testProject) {
+                  return !openshift.selector('dc', PROJECT_NAME).exists()
+                }
+              }
+            }
+          }
+          steps {
+            script {
+              openshift.withCluster() {
+                def ciProject = openshift.project()
+                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-test/)
+                openshift.withProject(testProject) {
+                  openshift.newApp("${PROJECT_NAME}:latest", "--name=${PROJECT_NAME}").narrow('svc').expose()
+                }
+              }
+            }
+          }
+        }
+        stage('Create Demo Deployment') {
+          when {
+            expression {
+              openshift.withCluster() {
+                def ciProject = openshift.project()
+                def demoProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-demo/)
+                openshift.withProject(demoProject) {
+                  return !openshift.selector('dc', PROJECT_NAME).exists()
+                }
+              }
+            }
+          }
+          steps {
+            script {
+              openshift.withCluster() {
+                def ciProject = openshift.project()
+                def demoProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-demo/)
+                openshift.withProject(demoProject) {
+                  openshift.newApp("${PROJECT_NAME}:latest", "--name=${PROJECT_NAME}").narrow('svc').expose()
+                }
+              }
+            }
           }
         }
       }
@@ -69,30 +126,6 @@ pipeline {
         script {
           openshift.withCluster() {
             openshift.selector('bc', PROJECT_NAME).startBuild("--from-file=target/${PROJECT_NAME}.jar", '--wait')
-          }
-        }
-      }
-    }
-    stage('Create Test Deployment') {
-      when {
-        expression {
-          openshift.withCluster() {
-            def ciProject = openshift.project()
-            def testProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-test/)
-            openshift.withProject(testProject) {
-              return !openshift.selector('dc', PROJECT_NAME).exists()
-            }
-          }
-        }
-      }
-      steps {
-        script {
-          openshift.withCluster() {
-            def ciProject = openshift.project()
-            def testProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-test/)
-            openshift.withProject(testProject) {
-              openshift.newApp("${PROJECT_NAME}:latest", "--name=${PROJECT_NAME}").narrow('svc').expose()
-            }
           }
         }
       }
@@ -121,30 +154,6 @@ pipeline {
             keepAll: true, reportDir: '/zap/wrk', reportFiles: 'baseline.html',
             reportName: 'ZAP Baseline Scan', reportTitles: 'ZAP Baseline Scan'
           ])
-        }
-      }
-    }
-    stage('Create Demo Deployment') {
-      when {
-        expression {
-          openshift.withCluster() {
-            def ciProject = openshift.project()
-            def demoProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-demo/)
-            openshift.withProject(demoProject) {
-              return !openshift.selector('dc', PROJECT_NAME).exists()
-            }
-          }
-        }
-      }
-      steps {
-        script {
-          openshift.withCluster() {
-            def ciProject = openshift.project()
-            def demoProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-demo/)
-            openshift.withProject(demoProject) {
-              openshift.newApp("${PROJECT_NAME}:latest", "--name=${PROJECT_NAME}").narrow('svc').expose()
-            }
-          }
         }
       }
     }
