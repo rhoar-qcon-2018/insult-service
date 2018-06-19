@@ -19,17 +19,19 @@ pipeline {
         sh 'mvn package vertx:package'
       }
     }
-    stage('Ensure SonarQube Config') {
+    stage('Ensure SonarQube Webhook is configured') {
       when {
-        expression {
-          withSonarQubeEnv('sonar') {
-            sh "curl -u \"${SONAR_AUTH_TOKEN}:\" https://sonarqube:9000-/api/webhooks/list | grep Jenkins"
+        not {
+          expression {
+            withSonarQubeEnv('sonar') {
+              sh "curl -u \"${SONAR_AUTH_TOKEN}:\" http://sonarqube:9000/api/webhooks/list | grep Jenkins"
+            }
           }
         }
       }
       steps {
         withSonarQubeEnv('sonar') {
-          sh "curl -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" https://sonarqube:9000/api/webhooks/update"
+          sh "curl -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" http://sonarqube:9000/api/webhooks/update"
         }
       }
     }
