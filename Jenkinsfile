@@ -39,7 +39,7 @@ pipeline {
       steps {
         script {
           withSonarQubeEnv('sonar') {
-            sh "curl -vv -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" https://sonarqube:9000-/api/webhooks/update"
+            sh "curl -vv -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" http://sonarqube:9000-/api/webhooks/update"
             sh 'mvn sonar:sonar'
             def qualitygate = waitForQualityGate()
             if (qualitygate.status != "OK") {
