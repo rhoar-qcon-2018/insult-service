@@ -22,11 +22,13 @@ pipeline {
     stage('Ensure SonarQube Config') {
       when {
         expression {
-          sh "curl -u \"${SONAR_AUTH_TOKEN}:\" https://sonarqube:9000-/api/webhooks/list | grep Jenkins"
+          withSonarQubeEnv('sonar') {
+            sh "curl -u \"${SONAR_AUTH_TOKEN}:\" https://sonarqube:9000-/api/webhooks/list | grep Jenkins"
+          }
         }
       }
       steps {
-        withSonarQubeEnv() {
+        withSonarQubeEnv('sonar') {
           sh "curl -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" https://sonarqube:9000/api/webhooks/update"
         }
       }
@@ -34,7 +36,8 @@ pipeline {
     stage('Quality Analysis') {
       steps {
         script {
-          withSonarQubeEnv() {
+          withSonarQubeEnv('sonar') {
+            sh "curl -vv -X POST -u \"${SONAR_AUTH_TOKEN}:\" -F \"name=Jenkins\" -F \"url=http://jenkins/sonarqube-webhook/\" https://sonarqube:9000-/api/webhooks/update"
             sh 'mvn sonar:sonar'
             def qualitygate = waitForQualityGate()
             if (qualitygate.status != "OK") {
