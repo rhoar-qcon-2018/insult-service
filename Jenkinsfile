@@ -7,10 +7,6 @@ pipeline {
   }
   stages {
     stage('Quality And Security') {
-      input {
-        message "Debug Maven repo"
-        ok "DONE"
-      }
       parallel {
         stage('OWASP Dependency Check') {
           steps {
