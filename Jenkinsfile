@@ -173,6 +173,36 @@ items:
   }
 }
 
+def configMap = {namespace, project ->
+  def template = '''
+apiVersion: v1
+data:
+  adjective: |-
+    {
+      "host": "adjective-service",
+      "port": 80
+    }
+  http: |-
+    {
+      "address": "0.0.0.0",
+      "port": 8080
+    }
+  noun: |-
+    {
+        "host": "noun-service",
+        "port": 80
+    }
+kind: ConfigMap
+metadata:
+  name: insult-config
+'''
+  openshift.withCluster() {
+    openshift.withProject(project) {
+      openshift.apply(template, "--namespace=${project}")
+    }
+  }
+}
+
 pipeline {
   agent {
     label 'jenkins-slave-mvn'
@@ -267,6 +297,7 @@ pipeline {
         stage('Create Test Deployment') {
           steps {
             script {
+              configMap(devProject, PROJECT_NAME)
               deploymentConfig(PROJECT_NAME, ciProject, testProject)
             }
           }
@@ -274,6 +305,7 @@ pipeline {
         stage('Create Dev Deployment') {
           steps {
             script {
+              configMap(testProject, PROJECT_NAME)
               deploymentConfig(PROJECT_NAME, ciProject, devProject)
             }
           }
