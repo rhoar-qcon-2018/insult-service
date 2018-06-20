@@ -4,14 +4,10 @@ pipeline {
   }
   environment {
     PROJECT_NAME = 'insult-service'
-    KUBERNETES_NAMESPACE = "${OPENSHIFT_BUILD_NAMESPACE}"
+    KUBERNETES_NAMESPACE = openshift.project()
   }
   stages {
     stage('Quality And Security') {
-      input {
-        message "Debug OpenShift permissions"
-        ok "DONE"
-      }
       parallel {
         stage('OWASP Dependency Check') {
           steps {
@@ -42,6 +38,10 @@ pipeline {
       }
     }
     stage('Wait for SonarQube Quality Gate') {
+      input {
+        message "Debug OpenShift permissions"
+        ok "DONE"
+      }
       steps {
         script {
           withSonarQubeEnv('sonar') {
