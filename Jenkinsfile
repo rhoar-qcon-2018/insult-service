@@ -105,7 +105,7 @@ pipeline {
                 openshift.withCluster() {
                   def ciProject = openshift.project()
                   def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-                  openshift.withProject(ciProject) {
+                  openshift.withProject(devProject) {
                     return openshift.selector('is', PROJECT_NAME, "--namespace=${devProject}").exists()
                   }
                 }
