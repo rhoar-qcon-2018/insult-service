@@ -56,11 +56,9 @@ pipeline {
           when {
             not {
               expression {
-                openshift.withCluster() {
-                  def ciProject = openshift.project()
-                  openshift.withProject(ciProject) {
-                    return openshift.selector('is', PROJECT_NAME).exists()
-                  }
+                def ciProject = openshift.project()
+                openshift.withProject(ciProject) {
+                  return openshift.selector('is', PROJECT_NAME).exists()
                 }
               }
             }
@@ -78,12 +76,10 @@ pipeline {
           when {
             not {
               expression {
-                openshift.withCluster() {
-                  def ciProject = openshift.project()
-                  def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-                  openshift.withProject(testProject) {
-                    return openshift.selector('is', PROJECT_NAME).exists()
-                  }
+                def ciProject = openshift.project()
+                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+                openshift.withProject(testProject) {
+                  return openshift.selector('is', PROJECT_NAME).exists()
                 }
               }
             }
@@ -102,12 +98,10 @@ pipeline {
           when {
             not {
               expression {
-                openshift.withCluster() {
-                  def ciProject = openshift.project()
-                  def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-                  openshift.withProject(devProject) {
-                    return openshift.selector('is', PROJECT_NAME).exists()
-                  }
+                def ciProject = openshift.project()
+                def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+                openshift.withProject(devProject) {
+                  return openshift.selector('is', PROJECT_NAME).exists()
                 }
               }
             }
@@ -135,17 +129,13 @@ pipeline {
           when {
             not {
               expression {
-                openshift.withCluster() {
-                  return openshift.selector('bc', PROJECT_NAME).exists()
-                }
+                return openshift.selector('bc', PROJECT_NAME).exists()
               }
             }
           }
           steps {
             script {
-              openshift.withCluster() {
-                openshift.newBuild("--name=${PROJECT_NAME}", "--image-stream=redhat-openjdk18-openshift:1.1", "--binary", "--to='${PROJECT_NAME}:latest'")
-              }
+              openshift.newBuild("--name=${PROJECT_NAME}", "--image-stream=redhat-openjdk18-openshift:1.1", "--binary", "--to='${PROJECT_NAME}:latest'")
             }
           }
         }
@@ -153,23 +143,19 @@ pipeline {
           when {
             not {
               expression {
-                openshift.withCluster() {
-                  def ciProject = openshift.project()
-                  def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-                  openshift.withProject(testProject) {
-                    return openshift.selector('dc', PROJECT_NAME).exists()
-                  }
+                def ciProject = openshift.project()
+                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+                openshift.withProject(testProject) {
+                  return openshift.selector('dc', PROJECT_NAME).exists()
                 }
               }
             }
           }
           steps {
             script {
-              openshift.withCluster() {
-                def ciProject = openshift.project()
-                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-                sh "oc new-app --namespace=${testProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
-              }
+              def ciProject = openshift.project()
+              def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+              sh "oc new-app --namespace=${testProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
             }
           }
         }
@@ -177,23 +163,19 @@ pipeline {
           when {
             not {
               expression {
-                openshift.withCluster() {
-                  def ciProject = openshift.project()
-                  def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-                  openshift.withProject(devProject) {
-                    return openshift.selector('dc', PROJECT_NAME).exists()
-                  }
+                def ciProject = openshift.project()
+                def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+                openshift.withProject(devProject) {
+                  return openshift.selector('dc', PROJECT_NAME).exists()
                 }
               }
             }
           }
           steps {
             script {
-              openshift.withCluster() {
-                def ciProject = openshift.project()
-                def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-                sh "oc new-app --namespace=${devProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
-              }
+              def ciProject = openshift.project()
+              def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+              sh "oc new-app --namespace=${devProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
             }
           }
         }
@@ -202,20 +184,16 @@ pipeline {
     stage('Build Image') {
       steps {
         script {
-          openshift.withCluster() {
-            openshift.selector('bc', PROJECT_NAME).startBuild("--from-file=target/${PROJECT_NAME}.jar", '--wait')
-          }
+          openshift.selector('bc', PROJECT_NAME).startBuild("--from-file=target/${PROJECT_NAME}.jar", '--wait')
         }
       }
     }
     stage('Promote to TEST') {
       steps {
         script {
-          openshift.withCluster() {
-            def ciProject = openshift.project()
-            def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-            openshift.tag("${PROJECT_NAME}:latest", "${testProject}/${PROJECT_NAME}:latest")
-          }
+          def ciProject = openshift.project()
+          def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+          openshift.tag("${PROJECT_NAME}:latest", "${testProject}/${PROJECT_NAME}:latest")
         }
       }
     }
@@ -242,11 +220,9 @@ pipeline {
       }
       steps {
         script {
-          openshift.withCluster() {
-            def ciProject = openshift.project()
-            def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-            openshift.tag("${PROJECT_NAME}:latest", "${devProject}/${PROJECT_NAME}:latest")
-          }
+          def ciProject = openshift.project()
+          def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+          openshift.tag("${PROJECT_NAME}:latest", "${devProject}/${PROJECT_NAME}:latest")
         }
       }
     }
