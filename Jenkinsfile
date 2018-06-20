@@ -59,7 +59,7 @@ pipeline {
                 openshift.withCluster() {
                   def ciProject = openshift.project()
                   openshift.withProject(ciProject) {
-                    return openshift.selector('is', PROJECT_NAME, "--namespace=${ciProject}").exists()
+                    return openshift.selector('is', PROJECT_NAME).exists()
                   }
                 }
               }
@@ -82,7 +82,7 @@ pipeline {
                   def ciProject = openshift.project()
                   def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
                   openshift.withProject(ciProject) {
-                    return openshift.selector('is', PROJECT_NAME, "--namespace=${testProject}").exists()
+                    return openshift.selector('is', PROJECT_NAME).exists()
                   }
                 }
               }
@@ -106,7 +106,7 @@ pipeline {
                   def ciProject = openshift.project()
                   def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
                   openshift.withProject(devProject) {
-                    return openshift.selector('is', PROJECT_NAME, "--namespace=${devProject}").exists()
+                    return openshift.selector('is', PROJECT_NAME).exists()
                   }
                 }
               }
