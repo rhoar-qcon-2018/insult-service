@@ -1,4 +1,4 @@
-def ciProject = openshift.project()
+def ciProject = openshift.withCluster() { return openshift.project() }
 def testProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-test')
 def devProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-dev')
 
