@@ -19,7 +19,10 @@ spec: {}
   }
 }
 
-def buildConfig = {project, namespace, buildSecret, fromImageStream = 'redhat-openjdk18-openshift:1.1' ->
+def buildConfig = { project, namespace, buildSecret, fromImageStream ->
+  if (!fromImageStream) {
+    fromImageStream = 'redhat-openjdk18-openshift:1.1'
+  }
   def template = """
 ---
 apiVersion: build.openshift.io/v1
