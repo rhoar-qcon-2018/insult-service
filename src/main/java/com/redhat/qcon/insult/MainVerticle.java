@@ -32,6 +32,8 @@ public class MainVerticle extends AbstractVerticle {
 
     private static final Logger LOG = LoggerFactory.getLogger(MainVerticle.class);
 
+    JsonObject loadedConfig;
+
     Maybe<JsonObject> initConfigRetriever() {
         // Load the default configuration from the classpath
         LOG.info("Configuration store loading.");
@@ -76,10 +78,10 @@ public class MainVerticle extends AbstractVerticle {
      */
     private Maybe<OpenAPI3RouterFactory> provisionRouter(JsonObject config) {
         // Merge the loaded configuration into the config for this Verticle
-        config().mergeIn(config);
+        loadedConfig = config().mergeIn(config);
 
         // Instantiate the Insult Service and bind it to the event bus
-        InsultServiceImpl nonRx = new InsultServiceImpl(vertx.getDelegate(), config);
+        InsultServiceImpl nonRx = new InsultServiceImpl(vertx.getDelegate(), loadedConfig);
         new ServiceBinder(vertx.getDelegate())
                 .setAddress("insult.service")
                 .register(com.redhat.qcon.insult.services.insult.InsultService.class, nonRx);
