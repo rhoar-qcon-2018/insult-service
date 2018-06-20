@@ -243,31 +243,6 @@ pipeline {
         }
       }
     }
-    stage('OpenShift ImageStreams') {
-      parallel {
-        stage('CICD Env ImageStream') {
-          steps {
-            script {
-              buildImageStream(PROJECT_NAME, ciProject)
-            }
-          }
-        }
-        stage('Test Env ImageStream') {
-          steps {
-            script {
-              buildImageStream(PROJECT_NAME, testProject)
-            }
-          }
-        }
-        stage('Dev Env ImageStream') {
-          steps {
-            script {
-              buildImageStream(PROJECT_NAME, devProject)
-            }
-          }
-        }
-      }
-    }
     stage('OpenShift Deployments') {
       parallel {
         stage('Publish Artifacts') {
