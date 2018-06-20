@@ -1,5 +1,9 @@
-
-def ciProject = environment.get('OPENSHIFT_BUILD_NAMESPACE')
+def ciProject = 'labs-ci-cd'
+openshift.withCluster() {
+  openshift.withProject() {
+    ciProject = openshift.project()
+  }
+}
 def testProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-test')
 def devProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-dev')
 
