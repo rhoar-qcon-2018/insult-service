@@ -63,6 +63,26 @@ apiVersion: v1
 kind: List
 items:
 - apiVersion: v1
+  data:
+    adjective: |-
+      {
+        "host": "adjective-service",
+        "port": 80
+      }
+    http: |-
+      {
+        "address": "0.0.0.0",
+        "port": 8080
+      }
+    noun: |-
+      {
+          "host": "noun-service",
+          "port": 80
+      }
+  kind: ConfigMap
+  metadata:
+    name: insult-config
+- apiVersion: v1
   kind: ImageStream
   metadata:
     labels:
@@ -295,7 +315,6 @@ pipeline {
         stage('Create Test Deployment') {
           steps {
             script {
-              configMap(devProject, PROJECT_NAME)
               deploymentConfig(PROJECT_NAME, ciProject, testProject)
             }
           }
@@ -303,7 +322,6 @@ pipeline {
         stage('Create Dev Deployment') {
           steps {
             script {
-              configMap(testProject, PROJECT_NAME)
               deploymentConfig(PROJECT_NAME, ciProject, devProject)
             }
           }
