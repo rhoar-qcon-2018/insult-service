@@ -1,6 +1,6 @@
 def ciProject = openshift.project()
-def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+def testProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-test')
+def devProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-dev')
 
 def buildImageStream = {project, namespace ->
   def template = """
