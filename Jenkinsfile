@@ -4,6 +4,7 @@ pipeline {
   }
   environment {
     PROJECT_NAME = 'insult-service'
+    KUBERNETES_NAMESPACE = OPENSHIFT_BUILD_NAMESPACE
   }
   stages {
     stage('Quality And Security') {
