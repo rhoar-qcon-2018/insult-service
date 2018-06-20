@@ -190,7 +190,7 @@ pipeline {
         }
       }
     }
-/*    stage('Quality And Security') {
+    stage('Quality And Security') {
       parallel {
         stage('OWASP Dependency Check') {
           steps {
@@ -232,7 +232,7 @@ pipeline {
           }
         }
       }
-    }*/
+    }
     stage('OpenShift ImageStreams') {
       parallel {
         stage('CICD Env ImageStream') {
@@ -260,11 +260,11 @@ pipeline {
     }
     stage('OpenShift Deployments') {
       parallel {
-/*        stage('Publish Artifacts') {
+        stage('Publish Artifacts') {
           steps {
             sh 'mvn package vertx:package deploy:deploy -DskipTests -DaltDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/'
           }
-        }*/
+        }
         stage('Create Binary BuildConfig') {
           steps {
             script {
@@ -288,7 +288,7 @@ pipeline {
         }
       }
     }
-/*    stage('Build Image') {
+    stage('Build Image') {
       steps {
         script {
           openshift.selector('bc', PROJECT_NAME).startBuild("--from-file=target/${PROJECT_NAME}.jar", '--wait')
@@ -302,21 +302,6 @@ pipeline {
         }
       }
     }
-    stage('Web Security Analysis') {
-      steps {
-        agent {
-          label 'jenkins-slave-zap'
-        }
-        script {
-          sh "/zap/zap-baseline.py -r baseline.html -t http://${PROJECT_NAME}-${testProject}.apps.qcon.openshift.opentlc.com/"
-          publishHTML([
-                  allowMissing: false, alwaysLinkToLastBuild: false,
-                  keepAll: true, reportDir: '/zap/wrk', reportFiles: 'baseline.html',
-                  reportName: 'ZAP Baseline Scan', reportTitles: 'ZAP Baseline Scan'
-          ])
-        }
-      }
-    }
     stage('Promote to DEMO') {
       input {
         message "Promote service to DEMO environment?"
@@ -327,6 +312,6 @@ pipeline {
           openshift.tag("${PROJECT_NAME}:latest", "${devProject}/${PROJECT_NAME}:latest")
         }
       }
-    }*/
+    }
   }
 }
