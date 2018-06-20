@@ -53,65 +53,60 @@ pipeline {
     stage('OpenShift ImageStreams') {
       parallel {
         stage('CICD Env ImageStream') {
-          when {
-            not {
-              expression {
-                def ciProject = openshift.project()
-                openshift.withProject(ciProject) {
-                  return openshift.selector('is', PROJECT_NAME).exists()
-                }
-              }
-            }
-          }
           steps {
             script {
               def ciProject = openshift.project()
               openshift.withProject(ciProject) {
-                sh "oc create imagestream ${PROJECT_NAME} --namespace=${ciProject}"
+                openshift.apply("imagestream", """
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    build: '${PROJECT_NAME}'
+  name: '${PROJECT_NAME}'
+spec: {}
+                """)
               }
             }
           }
         }
         stage('Test Env ImageStream') {
-          when {
-            not {
-              expression {
-                def ciProject = openshift.project()
-                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-                openshift.withProject(testProject) {
-                  return openshift.selector('is', PROJECT_NAME).exists()
-                }
-              }
-            }
-          }
           steps {
             script {
               def ciProject = openshift.project()
               def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
               openshift.withProject(testProject) {
-                sh "oc create imagestream ${PROJECT_NAME} --namespace=${testProject}"
+                openshift.apply("imagestream", """
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    build: '${PROJECT_NAME}'
+  name: '${PROJECT_NAME}'
+spec: {}
+                """)
               }
             }
           }
         }
         stage('Dev Env ImageStream') {
-          when {
-            not {
-              expression {
-                def ciProject = openshift.project()
-                def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-                openshift.withProject(devProject) {
-                  return openshift.selector('is', PROJECT_NAME).exists()
-                }
-              }
-            }
-          }
           steps {
             script {
               def ciProject = openshift.project()
               def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
               openshift.withProject(devProject) {
-                sh "oc create imagestream ${PROJECT_NAME} --namespace=${devProject}"
+                openshift.apply("imagestream", """
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    build: '${PROJECT_NAME}'
+  name: '${PROJECT_NAME}'
+spec: {}
+                """)
               }
             }
           }
