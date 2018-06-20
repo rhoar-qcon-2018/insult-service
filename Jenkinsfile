@@ -1,6 +1,6 @@
-def ciProject = 'labs-ci-cd'
-def testProject = 'labs-dev'
-def devProject = 'labs-test'
+def ciProject = openshift.project()
+def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
 
 def buildImageStream = {project, namespace ->
   def template = """
@@ -179,20 +179,9 @@ pipeline {
   }
   environment {
     PROJECT_NAME = 'insult-service'
-    KUBERNETES_NAMESPACE = 'labs-ci-cduser1'
+    KUBERNETES_NAMESPACE = "${ciProject}"
   }
   stages {
-    stage('Define Variables') {
-      steps {
-        script {
-          openshift.withCluster() {
-            ciProject = openshift.project()
-            testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-            devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-          }
-        }
-      }
-    }
     stage('Quality And Security') {
       parallel {
         stage('OWASP Dependency Check') {
