@@ -9,23 +9,6 @@ openshift.withCluster() {
   }
 }
 
-def buildImageStream = {project, namespace ->
-  def template = """
----
-apiVersion: v1
-kind: ImageStream
-metadata:
-  labels:
-    build: '${project}'
-  name: '${project}'
-  namespace: '${namespace}'
-spec: {}
-"""
-  openshift.withCluster() {
-    openshift.apply(template, "--namespace=${namespace}")
-  }
-}
-
 def buildConfig = { project, namespace, buildSecret, fromImageStream ->
   if (!fromImageStream) {
     fromImageStream = 'redhat-openjdk18-openshift:1.1'
@@ -79,6 +62,14 @@ def deploymentConfig = {project, ciNamespace, targetNamespace ->
 apiVersion: v1
 kind: List
 items:
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      build: '${project}'
+    name: '${project}'
+    namespace: '${targetNamespace}'
+  spec: {}
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:
