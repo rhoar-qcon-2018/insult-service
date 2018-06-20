@@ -205,7 +205,7 @@ metadata:
 '''
   openshift.withCluster() {
     openshift.withProject(project) {
-      openshift.apply(template, "--namespace=${project}")
+      openshift.apply(template, "--namespace=${namespace}")
     }
   }
 }
