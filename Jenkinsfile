@@ -2,6 +2,57 @@ def ciProject = 'labs-ci-cd'
 def testProject = 'labs-dev'
 def devProject = 'labs-test'
 
+def buildImageStream = {project, namespace -> """
+---
+apiVersion: v1
+kind: ImageStream
+metadata:
+  labels:
+    build: '${project}\'
+  name: '${project}\'
+  namespace: '${namespace}\'
+spec: {}
+""" }
+
+def buildConfig = {project, namespace, buildSecret, fromImageStream = 'redhat-openjdk18-openshift:1.1' -> """
+---
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  labels:
+    build: ${project}
+  name: ${project}
+  namespace: ${namespace}
+spec:
+  failedBuildsHistoryLimit: 5
+  nodeSelector: null
+  output:
+    to:
+      kind: ImageStreamTag
+      name: '${project}:latest'
+  postCommit: {}
+  resources: {}
+  runPolicy: Serial
+  source:
+    binary: {}
+    type: Binary
+  strategy:
+    sourceStrategy:
+      from:
+        kind: ImageStreamTag
+        name: '${fromImageStream}'
+        namespace: openshift
+    type: Source
+  successfulBuildsHistoryLimit: 5
+  triggers:
+    - github:
+        secret: ${buildSecret}
+      type: GitHub
+    - generic:
+        secret: ${buildSecret}
+      type: Generic
+""" }
+
 pipeline {
   agent {
     label 'jenkins-slave-mvn'
@@ -70,48 +121,21 @@ pipeline {
         stage('CICD Env ImageStream') {
           steps {
             script {
-              openshift.apply("""
----
-apiVersion: v1
-kind: ImageStream
-metadata:
-  labels:
-    build: '${PROJECT_NAME}'
-  name: '${PROJECT_NAME}'
-  namespace: '${ciProject}'
-spec: {}""")
+              openshift.apply(buildImageStream(PROJECT_NAME, ciProject))
             }
           }
         }
         stage('Test Env ImageStream') {
           steps {
             script {
-              openshift.apply("""
----
-apiVersion: v1
-kind: ImageStream
-metadata:
-  labels:
-    build: '${PROJECT_NAME}'
-  name: '${PROJECT_NAME}'
-  namespace: '${testProject}'
-spec: {}""")
+              openshift.apply(buildImageStream(PROJECT_NAME, testProject))
             }
           }
         }
         stage('Dev Env ImageStream') {
           steps {
             script {
-              openshift.apply("""
----
-apiVersion: v1
-kind: ImageStream
-metadata:
-  labels:
-    build: '${PROJECT_NAME}'
-  name: '${PROJECT_NAME}'
-  namespace: '${devProject}'
-spec: {}""")
+              openshift.apply(buildImageStream(PROJECT_NAME, devProject))
             }
           }
         }
@@ -127,14 +151,7 @@ spec: {}""")
         stage('Create Binary BuildConfig') {
           steps {
             script {
-              openshift.apply("""
----
-apiVersion: v1
-kind: List
-objects:
-- apiVersion: v1
-  kind: BuildConfig
-  """)
+              openshift.apply(buildConfig(PROJECT_NAME, ciProject, UUID.randomUUID().toString()))
             }
           }
         }
