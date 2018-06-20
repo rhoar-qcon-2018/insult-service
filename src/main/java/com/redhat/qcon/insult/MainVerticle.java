@@ -3,6 +3,7 @@ package com.redhat.qcon.insult;
 import com.redhat.qcon.insult.services.insult.InsultServiceImpl;
 import com.redhat.qcon.insult.services.reactivex.insult.InsultService;
 import io.reactivex.Maybe;
+import io.swagger.models.auth.In;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
@@ -96,14 +97,16 @@ public class MainVerticle extends AbstractVerticle {
     Maybe<HttpServer> provisionHttpServer(OpenAPI3RouterFactory factory) {
         // Configure the HTTP Server options
         // - Listen on port 8080 on all interfaces using HTTP2 protocol
-        HttpServerOptions httpOpts = new HttpServerOptions().setUseAlpn(true)
+        HttpServerOptions httpOpts = new HttpServerOptions()
                 .setHost("0.0.0.0")
                 .setPort(8080)
                 .setLogActivity(true);
 
-        InsultService service = new ServiceProxyBuilder(vertx.getDelegate())
-                                        .setAddress("insult.service")
-                                        .build(InsultService.class);
+        InsultService service = InsultService
+                .newInstance(new ServiceProxyBuilder(vertx.getDelegate())
+                    .setAddress("insult.service")
+                    .build(com.redhat.qcon.insult.services.insult.InsultService.class)
+                );
 
         // Map out OpenAPI3 route to our Service Proxy implementation
         factory.addHandlerByOperationId("getInsult",
