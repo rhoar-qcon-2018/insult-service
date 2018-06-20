@@ -66,6 +66,121 @@ spec:
   }
 }
 
+def deploymentConfig = {project, ciNamespace, targetNamespace ->
+  def template = """
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: DeploymentConfig
+    metadata:
+      labels:
+        app: '${project}'
+      name: '${project}'
+    spec:
+      replicas: 1
+      selector:
+        name: '${project}'
+      strategy:
+        activeDeadlineSeconds: 21600
+        resources: {}
+        rollingParams:
+          intervalSeconds: 1
+          maxSurge: 25%
+          maxUnavailable: 25%
+          timeoutSeconds: 600
+          updatePeriodSeconds: 1
+        type: Rolling
+      template:
+        metadata:
+          creationTimestamp: null
+          labels:
+            name: '${project}'
+        spec:
+          containers:
+            - image: '${project}'
+              imagePullPolicy: Always
+              name: '${project}'
+              ports:
+                - containerPort: 5800
+                  protocol: TCP
+                - containerPort: 8778
+                  protocol: TCP
+                - containerPort: 8080
+                  protocol: TCP
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+          dnsPolicy: ClusterFirst
+          restartPolicy: Always
+          securityContext: {}
+          terminationGracePeriodSeconds: 30
+      test: false
+      triggers:
+        - type: ConfigChange
+        - imageChangeParams:
+            automatic: true
+            containerNames:
+              - '${project}'
+            from:
+              kind: ImageStreamTag
+              name: '${project}:latest'
+          type: ImageChange
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      labels:
+        name: '${project}'
+      name: '${project}'
+    spec:
+      ports:
+        - name: HTTP
+          port: 8080
+          protocol: TCP
+          targetPort: 8080
+        - name: JOLOKIA
+          port: 8778
+          protocol: TCP
+          targetPort: 8778
+        - name: CLUSTER
+          port: 5800
+          protocol: TCP
+          targetPort: 5800
+      selector:
+        name: '${project}'
+      sessionAffinity: None
+      type: ClusterIP
+  - apiVersion: v1
+    kind: Route
+    metadata:
+      labels:
+        name: '${project}'
+      name: '${project}'
+    spec:
+      port:
+        targetPort: HTTP
+      to:
+        kind: Service
+        name: '${project}'
+        weight: 100
+      wildcardPolicy: None
+  - apiVersion: v1
+    kind: RoleBinding
+    metadata:
+      name: jenkins_pipeline_edit
+    roleRef:
+      name: edit
+    subjects:
+      - kind: ServiceAccount
+        name: jenkins
+        namespace: '${ciNamespace}'
+    userNames:
+      - 'system:serviceaccount:${ciNamespace}:jenkins'
+"""
+  openshift.withCluster() {
+    openshift.apply(template, "--namespace=${targetNamespace}")
+  }
+}
+
 pipeline {
   agent {
     label 'jenkins-slave-mvn'
@@ -169,34 +284,16 @@ pipeline {
           }
         }
         stage('Create Test Deployment') {
-          when {
-            not {
-              expression {
-                openshift.withProject(testProject) {
-                  return openshift.selector('dc', PROJECT_NAME).exists()
-                }
-              }
-            }
-          }
           steps {
             script {
-              sh "oc new-app --namespace=${testProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
+              deploymentConfig(PROJECT_NAME, ciProject, testProject)
             }
           }
         }
-        stage('Create Demo Deployment') {
-          when {
-            not {
-              expression {
-                openshift.withProject(devProject) {
-                  return openshift.selector('dc', PROJECT_NAME).exists()
-                }
-              }
-            }
-          }
+        stage('Create Dev Deployment') {
           steps {
             script {
-              sh "oc new-app --namespace=${devProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
+              deploymentConfig(PROJECT_NAME, ciProject, devProject)
             }
           }
         }
