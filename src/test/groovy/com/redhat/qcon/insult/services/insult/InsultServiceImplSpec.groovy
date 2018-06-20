@@ -2,6 +2,7 @@ package com.redhat.qcon.insult.services.insult
 
 import io.specto.hoverfly.junit.core.Hoverfly
 import io.specto.hoverfly.junit.core.SimulationSource
+import io.vertx.circuitbreaker.CircuitBreakerState
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.reactivex.circuitbreaker.CircuitBreaker
@@ -19,6 +20,7 @@ import static io.specto.hoverfly.junit.core.SimulationSource.*
 import static io.specto.hoverfly.junit.dsl.HoverflyDsl.*
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.serverError
 import static io.specto.hoverfly.junit.dsl.ResponseCreators.success
+import static io.vertx.circuitbreaker.CircuitBreakerState.*
 
 class InsultServiceImplSpec extends Specification {
     @Shared
@@ -139,10 +141,15 @@ class InsultServiceImplSpec extends Specification {
             GET_RESP_FOUR  | 'Slow noun reply' || true      | '[failure]' | 'noun'
     }
 
+    @Unroll
     def "Test health check endpoint: #description"() {
         setup: 'Create Mocks for circuit breakers'
-            def adjBreaker = Mock(CircuitBreaker)
-            def nounBreaker = Mock(CircuitBreaker)
+            def adjBreaker = Mock(CircuitBreaker) {
+                1 * state() >> adjective
+            }
+            def nounBreaker = Mock(CircuitBreaker) {
+                1 * state() >> noun
+            }
 
         and: 'Create an instance of the service under test'
             def underTest = new InsultServiceImpl(vertx, httpClientConfig)
@@ -165,10 +172,10 @@ class InsultServiceImplSpec extends Specification {
 
         where: 'The following data table is used.'
             description            | status     | noun      | adjective
-            'Both breakers closed' | true       | 'CLOSED'  | 'CLOSED'
-            'Adj breaker open'     | false      | 'CLOSED'  | 'OPEN'
-            'Noun breaker open'    | false      | 'OPEN'    | 'CLOSED'
-            'Both breakers open'   | false      | 'OPEN'    | 'OPEN'
+            'Both breakers closed' | true       | CLOSED    | CLOSED
+            'Adj breaker open'     | false      | CLOSED    | OPEN
+            'Noun breaker open'    | false      | OPEN      | CLOSED
+            'Both breakers open'   | false      | OPEN      | OPEN
     }
 
     def cleanupSpec() {

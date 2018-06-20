@@ -56,12 +56,14 @@ public class InsultServiceImpl implements InsultService {
         adjBreaker = CircuitBreaker
                         .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
                         .openHandler(t -> new JsonObject().put("adj", "[open]"))
-                        .fallback(t -> new JsonObject().put("adj", "[failure]"));
+                        .fallback(t -> new JsonObject().put("adj", "[failure]"))
+                        .reset();
 
         nounBreaker = CircuitBreaker
                         .create("nounBreaker", Vertx.newInstance(vertx), breakerOpts)
                         .openHandler(t -> new JsonObject().put("noun", "[open]"))
-                        .fallback(t -> new JsonObject().put("noun", "[failure]"));
+                        .fallback(t -> new JsonObject().put("noun", "[failure]"))
+                        .reset();
     }
 
     /**
