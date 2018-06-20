@@ -73,7 +73,7 @@ pipeline {
         }
       }
     }
-    stage('Quality And Security') {
+/*    stage('Quality And Security') {
       parallel {
         stage('OWASP Dependency Check') {
           steps {
@@ -115,7 +115,7 @@ pipeline {
           }
         }
       }
-    }
+    }*/
     stage('OpenShift ImageStreams') {
       parallel {
         stage('CICD Env ImageStream') {
@@ -149,11 +149,11 @@ pipeline {
     }
     stage('OpenShift Deployments') {
       parallel {
-        stage('Publish Artifacts') {
+/*        stage('Publish Artifacts') {
           steps {
             sh 'mvn package vertx:package deploy:deploy -DskipTests -DaltDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/'
           }
-        }
+        }*/
         stage('Create Binary BuildConfig') {
           steps {
             script {
@@ -195,7 +195,7 @@ pipeline {
         }
       }
     }
-    stage('Build Image') {
+/*    stage('Build Image') {
       steps {
         script {
           openshift.selector('bc', PROJECT_NAME).startBuild("--from-file=target/${PROJECT_NAME}.jar", '--wait')
@@ -234,6 +234,6 @@ pipeline {
           openshift.tag("${PROJECT_NAME}:latest", "${devProject}/${PROJECT_NAME}:latest")
         }
       }
-    }
+    }*/
   }
 }
