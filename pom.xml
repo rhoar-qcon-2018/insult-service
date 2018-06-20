@@ -129,6 +129,7 @@
         </dependency>
     </dependencies>
     <build>
+        <finalName>insult-service</finalName>
         <plugins>
             <plugin>
                 <groupId>io.fabric8</groupId>
