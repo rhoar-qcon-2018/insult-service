@@ -5,21 +5,27 @@ pipeline {
   }
   stages {
     stage('Quality And Security') {
-      agent {
-        label 'jenkins-slave-mvn'
-      }
       parallel {
         stage('OWASP Dependency Check') {
+          agent {
+            label 'jenkins-slave-mvn'
+          }
           steps {
             sh 'mvn -T 2 dependency-check:check'
           }
         }
         stage('Compile & Test') {
+          agent {
+            label 'jenkins-slave-mvn'
+          }
           steps {
             sh 'mvn -T 2 package vertx:package'
           }
         }
         stage('Ensure SonarQube Webhook is configured') {
+          agent {
+            label 'jenkins-slave-mvn'
+          }
           when {
             not {
               expression {
@@ -54,16 +60,17 @@ pipeline {
       }
     }
     stage('OpenShift Configuration') {
-      agent {
-        label 'jenkins-slave-mvn'
-      }
       parallel {
         stage('Publish Artifacts') {
+          agent {
+            label 'jenkins-slave-mvn'
+          }
           steps {
             sh 'mvn package vertx:package deploy:deploy -DskipTests -DaltDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/'
           }
         }
         stage('Create Binary BuildConfig') {
+          agent any
           when {
             not {
               expression {
@@ -82,6 +89,7 @@ pipeline {
           }
         }
         stage('Create Test Deployment') {
+          agent any
           when {
             not {
               expression {
@@ -106,6 +114,7 @@ pipeline {
           }
         }
         stage('Create Demo Deployment') {
+          agent any
           when {
             not {
               expression {
@@ -144,9 +153,7 @@ pipeline {
       }
     }
     stage('Promote to TEST') {
-      agent {
-        label 'jenkins-slave-mvn'
-      }
+      agent any
       steps {
         script {
           openshift.withCluster() {
@@ -174,9 +181,7 @@ pipeline {
       }
     }
     stage('Promote to DEMO') {
-      agent {
-        label 'jenkins-slave-mvn'
-      }
+      agent any
       input {
         message "Promote service to DEMO environment?"
         ok "PROMOTE"
