@@ -69,7 +69,7 @@ pipeline {
             script {
               def ciProject = openshift.project()
               openshift.withProject(ciProject) {
-                sh "oc create imagestream --name=${PROJECT_NAME} --namespace=${ciProject}"
+                sh "oc create imagestream ${PROJECT_NAME} --namespace=${ciProject}"
               }
             }
           }
@@ -81,7 +81,7 @@ pipeline {
                 openshift.withCluster() {
                   def ciProject = openshift.project()
                   def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-                  openshift.withProject(ciProject) {
+                  openshift.withProject(testProject) {
                     return openshift.selector('is', PROJECT_NAME).exists()
                   }
                 }
@@ -93,7 +93,7 @@ pipeline {
               def ciProject = openshift.project()
               def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
               openshift.withProject(testProject) {
-                sh "oc create imagestream --name=${PROJECT_NAME} --namespace=${testProject}"
+                sh "oc create imagestream ${PROJECT_NAME} --namespace=${testProject}"
               }
             }
           }
@@ -117,7 +117,7 @@ pipeline {
               def ciProject = openshift.project()
               def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
               openshift.withProject(devProject) {
-                sh "oc create imagestream --name=${PROJECT_NAME} --namespace=${devProject}"
+                sh "oc create imagestream ${PROJECT_NAME} --namespace=${devProject}"
               }
             }
           }
