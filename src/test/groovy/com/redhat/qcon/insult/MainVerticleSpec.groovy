@@ -15,18 +15,20 @@ class MainVerticleSpec extends Specification {
             def fut = Future.future()
         and: '''An instance of Spock's AsyncConditions'''
             def async = new AsyncConditions(1)
+        and: 'The Verticle under test'
+            def underTest = new MainVerticle()
 
         when: 'We attempt to deploy the main Verticle'  // (3)
-            vertx.deployVerticle(new MainVerticle(), fut.completer())
+            vertx.deployVerticle(underTest, fut.completer())
 
         then: 'Expect that the correct configuration is found and loaded'
             fut.setHandler({ res ->
                 async.evaluate {
-                    def config = vertx.getOrCreateContext().config()
+                    def config = underTest.loadedConfig
                     assert res.succeeded() // (4)
-                    assert config.hasProperty('insult') // (5)
-                    assert config.hasProperty('adjective') // (6)
-                    assert config.hasProperty('http') // (7)
+                    assert config.getJsonObject('noun').getInteger('port') == 80 // (5)
+                    assert config.getJsonObject('adjective').getInteger('port') == 80 // (6)
+                    assert config.getJsonObject('http').getInteger('port') == 8080 // (7)
                 }
             })
 
