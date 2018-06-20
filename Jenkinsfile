@@ -214,11 +214,11 @@ pipeline {
         }
         stage('Ensure SonarQube Webhook is configured') {
           when {
-            not {
-              expression {
-                withSonarQubeEnv('sonar') {
-                  sh "curl -u \"${SONAR_AUTH_TOKEN}:\" http://sonarqube:9000/api/webhooks/list | grep Jenkins"
-                }
+            expression {
+              withSonarQubeEnv('sonar') {
+                def retVal = sh(returnStatus: true, script: "curl -u \"${SONAR_AUTH_TOKEN}:\" http://sonarqube:9000/api/webhooks/list | grep Jenkins")
+                echo "CURL COMMAND: ${retVal}"
+                return (retVal > 0)
               }
             }
           }
