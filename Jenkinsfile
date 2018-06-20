@@ -121,21 +121,27 @@ pipeline {
         stage('CICD Env ImageStream') {
           steps {
             script {
-              openshift.apply(buildImageStream(PROJECT_NAME, ciProject))
+              openshift.withCluster() {
+                openshift.apply(buildImageStream(PROJECT_NAME, ciProject))
+              }
             }
           }
         }
         stage('Test Env ImageStream') {
           steps {
             script {
-              openshift.apply(buildImageStream(PROJECT_NAME, testProject))
+              openshift.withCluster() {
+                openshift.apply(buildImageStream(PROJECT_NAME, testProject))
+              }
             }
           }
         }
         stage('Dev Env ImageStream') {
           steps {
             script {
-              openshift.apply(buildImageStream(PROJECT_NAME, devProject))
+              openshift.withCluster() {
+                openshift.apply(buildImageStream(PROJECT_NAME, devProject))
+              }
             }
           }
         }
