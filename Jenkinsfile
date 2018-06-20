@@ -122,7 +122,7 @@ pipeline {
           steps {
             script {
               openshift.withCluster() {
-                openshift.apply(buildImageStream(PROJECT_NAME, ciProject))
+                openshift.apply(buildImageStream(PROJECT_NAME, ciProject), "--namespace=${ciProject}")
               }
             }
           }
@@ -131,7 +131,7 @@ pipeline {
           steps {
             script {
               openshift.withCluster() {
-                openshift.apply(buildImageStream(PROJECT_NAME, testProject))
+                openshift.apply(buildImageStream(PROJECT_NAME, testProject), "--namespace=${testProject}")
               }
             }
           }
@@ -140,7 +140,7 @@ pipeline {
           steps {
             script {
               openshift.withCluster() {
-                openshift.apply(buildImageStream(PROJECT_NAME, devProject))
+                openshift.apply(buildImageStream(PROJECT_NAME, devProject), "--namespace=${devProject}")
               }
             }
           }
