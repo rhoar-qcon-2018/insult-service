@@ -1,3 +1,7 @@
+def ciProject = 'labs-ci-cd'
+def testProject = 'labs-dev'
+def devProject = 'labs-test'
+
 pipeline {
   agent {
     label 'jenkins-slave-mvn'
@@ -7,6 +11,17 @@ pipeline {
     KUBERNETES_NAMESPACE = 'labs-ci-cduser1'
   }
   stages {
+    stage('Define Variables') {
+      steps {
+        script {
+          openshift.withCluster() {
+            ciProject = openshift.project()
+            testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+            devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+          }
+        }
+      }
+    }
     stage('Quality And Security') {
       parallel {
         stage('OWASP Dependency Check') {
@@ -55,7 +70,6 @@ pipeline {
         stage('CICD Env ImageStream') {
           steps {
             script {
-              def ciProject = openshift.project()
               openshift.apply("""
 ---
 apiVersion: v1
@@ -72,8 +86,6 @@ spec: {}""")
         stage('Test Env ImageStream') {
           steps {
             script {
-              def ciProject = openshift.project()
-              def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
               openshift.apply("""
 ---
 apiVersion: v1
@@ -90,8 +102,6 @@ spec: {}""")
         stage('Dev Env ImageStream') {
           steps {
             script {
-              def ciProject = openshift.project()
-              def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
               openshift.apply("""
 ---
 apiVersion: v1
@@ -115,16 +125,16 @@ spec: {}""")
           }
         }
         stage('Create Binary BuildConfig') {
-          when {
-            not {
-              expression {
-                return openshift.selector('bc', PROJECT_NAME).exists()
-              }
-            }
-          }
           steps {
             script {
-              openshift.newBuild("--name=${PROJECT_NAME}", "--image-stream=redhat-openjdk18-openshift:1.1", "--binary", "--to='${PROJECT_NAME}:latest'")
+              openshift.apply("""
+---
+apiVersion: v1
+kind: List
+objects:
+- apiVersion: v1
+  kind: BuildConfig
+  """)
             }
           }
         }
@@ -132,8 +142,6 @@ spec: {}""")
           when {
             not {
               expression {
-                def ciProject = openshift.project()
-                def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
                 openshift.withProject(testProject) {
                   return openshift.selector('dc', PROJECT_NAME).exists()
                 }
@@ -142,8 +150,6 @@ spec: {}""")
           }
           steps {
             script {
-              def ciProject = openshift.project()
-              def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
               sh "oc new-app --namespace=${testProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
             }
           }
@@ -152,8 +158,6 @@ spec: {}""")
           when {
             not {
               expression {
-                def ciProject = openshift.project()
-                def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
                 openshift.withProject(devProject) {
                   return openshift.selector('dc', PROJECT_NAME).exists()
                 }
@@ -162,8 +166,6 @@ spec: {}""")
           }
           steps {
             script {
-              def ciProject = openshift.project()
-              def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
               sh "oc new-app --namespace=${devProject} --name=${PROJECT_NAME} --allow-missing-imagestream-tags=true --image-stream=${PROJECT_NAME}"
             }
           }
@@ -180,8 +182,6 @@ spec: {}""")
     stage('Promote to TEST') {
       steps {
         script {
-          def ciProject = openshift.project()
-          def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
           openshift.tag("${PROJECT_NAME}:latest", "${testProject}/${PROJECT_NAME}:latest")
         }
       }
@@ -192,7 +192,6 @@ spec: {}""")
           label 'jenkins-slave-zap'
         }
         script {
-          def testProject = ciProject.replaceFirst(/^labs-ci-cd/, /labs-test/)
           sh "/zap/zap-baseline.py -r baseline.html -t http://${PROJECT_NAME}-${testProject}.apps.qcon.openshift.opentlc.com/"
           publishHTML([
                   allowMissing: false, alwaysLinkToLastBuild: false,
@@ -209,8 +208,6 @@ spec: {}""")
       }
       steps {
         script {
-          def ciProject = openshift.project()
-          def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
           openshift.tag("${PROJECT_NAME}:latest", "${devProject}/${PROJECT_NAME}:latest")
         }
       }
