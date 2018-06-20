@@ -14,7 +14,7 @@
         <vertx.version>3.5.2</vertx.version>
         <vertx.verticle>com.redhat.qcon.insult.MainVerticle</vertx.verticle>
         <!-- Maven plugins -->
-        <vertx-maven-plugin.version>1.0.13</vertx-maven-plugin.version>
+        <vertx-maven-plugin.version>1.0.15</vertx-maven-plugin.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -132,7 +132,7 @@
         <finalName>insult-service</finalName>
         <plugins>
             <plugin>
-                <groupId>io.fabric8</groupId>
+                <groupId>io.reactiverse</groupId>
                 <artifactId>vertx-maven-plugin</artifactId>
                 <version>${vertx-maven-plugin.version}</version>
                 <executions>
