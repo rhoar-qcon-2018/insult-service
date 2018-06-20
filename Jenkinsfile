@@ -7,6 +7,10 @@ pipeline {
   }
   stages {
     stage('Quality And Security') {
+      input {
+        message "Debug OpenShift permissions"
+        ok "DONE"
+      }
       parallel {
         stage('OWASP Dependency Check') {
           steps {
