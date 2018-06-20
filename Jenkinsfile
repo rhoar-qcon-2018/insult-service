@@ -253,6 +253,11 @@ pipeline {
         stage('Create Binary BuildConfig') {
           steps {
             script {
+              openshift.withCluster() {
+                openshift.withProject(ciProject) {
+                  openshift.apply('imagestream', PROJECT_NAME)
+                }
+              }
               buildConfig(PROJECT_NAME, ciProject, UUID.randomUUID().toString())
             }
           }
