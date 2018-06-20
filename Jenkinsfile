@@ -1,4 +1,5 @@
-def ciProject = System.getenv('OPENSHIFT_BUILD_NAMESPACE')
+
+def ciProject = build.environment.get('OPENSHIFT_BUILD_NAMESPACE')
 def testProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-test')
 def devProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-dev')
 
