@@ -2,7 +2,6 @@ package com.redhat.qcon.insult
 
 import io.vertx.core.Future
 import io.vertx.core.Vertx
-import io.vertx.core.json.JsonObject
 import spock.lang.Specification
 import spock.util.concurrent.AsyncConditions
 
