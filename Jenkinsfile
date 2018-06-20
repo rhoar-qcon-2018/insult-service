@@ -38,10 +38,6 @@ pipeline {
       }
     }
     stage('Wait for SonarQube Quality Gate') {
-      input {
-        message "Debug OpenShift permissions"
-        ok "DONE"
-      }
       steps {
         script {
           withSonarQubeEnv('sonar') {
@@ -54,7 +50,70 @@ pipeline {
         }
       }
     }
-    stage('OpenShift Configuration') {
+    stage('OpenShift ImageStreams') {
+      parallel {
+        stage('CICD Env ImageStream') {
+          when {
+            not {
+              expression {
+                openshift.withCluster() {
+                  def ciProject = openshift.project()
+                  return openshift.selector('is', PROJECT_NAME, "--namespace=${ciProject}").exists()
+                }
+              }
+            }
+          }
+          steps {
+            script {
+              def ciProject = openshift.project()
+              def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+              sh "oc create imagestream --name=${PROJECT_NAME} --namespace=${testProject}"
+            }
+          }
+        }
+        stage('Test Env ImageStream') {
+          when {
+            not {
+              expression {
+                openshift.withCluster() {
+                  def ciProject = openshift.project()
+                  def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+                  return openshift.selector('is', PROJECT_NAME, "--namespace=${testProject}").exists()
+                }
+              }
+            }
+          }
+          steps {
+            script {
+              def ciProject = openshift.project()
+              def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+              sh "oc create imagestream --name=${PROJECT_NAME} --namespace=${testProject}"
+            }
+          }
+        }
+        stage('Dev Env ImageStream') {
+          when {
+            not {
+              expression {
+                openshift.withCluster() {
+                  def ciProject = openshift.project()
+                  def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
+                  return openshift.selector('is', PROJECT_NAME, "--namespace=${devProject}").exists()
+                }
+              }
+            }
+          }
+          steps {
+            script {
+              def ciProject = openshift.project()
+              def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
+              sh "oc create imagestream --name=${PROJECT_NAME} --namespace=${testProject}"
+            }
+          }
+        }
+      }
+    }
+    stage('OpenShift Deployments') {
       parallel {
         stage('Publish Artifacts') {
           steps {
