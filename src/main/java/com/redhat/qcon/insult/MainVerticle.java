@@ -51,8 +51,8 @@ public class MainVerticle extends AbstractVerticle {
                 .setOptional(true);
 
         // When running inside of Kubernetes, configure the application to also load
-        // from a ConfigMap. This config is ONLY loaded when the environment variable
-        // KUBERNETES_NAMESPACE is set.
+        // from a ConfigMap. This config is ONLY loaded when running inside of
+        // Kubernetes or OpenShift
         ConfigStoreOptions confOpts = new ConfigStoreOptions()
                 .setType("configmap")
                 .setConfig(new JsonObject()
