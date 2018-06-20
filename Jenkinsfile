@@ -1,11 +1,13 @@
 def ciProject = 'labs-ci-cd'
+def testProject = 'labs-test'
+def devProject = 'labs-dev'
 openshift.withCluster() {
   openshift.withProject() {
     ciProject = openshift.project()
+    testProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-test')
+    openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-dev')
   }
 }
-def testProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-test')
-def devProject = openshift.project().replaceFirst(/^labs-ci-cd/, 'labs-dev')
 
 def buildImageStream = {project, namespace ->
   def template = """
