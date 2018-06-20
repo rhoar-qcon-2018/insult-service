@@ -2,17 +2,22 @@ def ciProject = 'labs-ci-cd'
 def testProject = 'labs-dev'
 def devProject = 'labs-test'
 
-def buildImageStream = {project, namespace -> """
+def buildImageStream = {project, namespace ->
+  def template = """
 ---
 apiVersion: v1
 kind: ImageStream
 metadata:
   labels:
-    build: '${project}\'
-  name: '${project}\'
-  namespace: '${namespace}\'
+    build: '${project}'
+  name: '${project}'
+  namespace: '${namespace}'
 spec: {}
-""" }
+"""
+  openshift.withCluster() {
+    openshift.apply(template, "--namespace=${namespace}")
+  }
+}
 
 def buildConfig = {project, namespace, buildSecret, fromImageStream = 'redhat-openjdk18-openshift:1.1' -> """
 ---
@@ -121,27 +126,21 @@ pipeline {
         stage('CICD Env ImageStream') {
           steps {
             script {
-              openshift.withCluster() {
-                openshift.apply(buildImageStream(PROJECT_NAME, ciProject), "--namespace=${ciProject}")
-              }
+              buildImageStream(PROJECT_NAME, ciProject)
             }
           }
         }
         stage('Test Env ImageStream') {
           steps {
             script {
-              openshift.withCluster() {
-                openshift.apply(buildImageStream(PROJECT_NAME, testProject), "--namespace=${testProject}")
-              }
+              buildImageStream(PROJECT_NAME, testProject)
             }
           }
         }
         stage('Dev Env ImageStream') {
           steps {
             script {
-              openshift.withCluster() {
-                openshift.apply(buildImageStream(PROJECT_NAME, devProject), "--namespace=${devProject}")
-              }
+              buildImageStream(PROJECT_NAME, devProject)
             }
           }
         }
