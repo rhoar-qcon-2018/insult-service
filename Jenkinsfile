@@ -4,7 +4,7 @@ pipeline {
   }
   environment {
     PROJECT_NAME = 'insult-service'
-    KUBERNETES_NAMESPACE = openshift.project()
+    KUBERNETES_NAMESPACE = 'labs-ci-cduser1'
   }
   stages {
     stage('Quality And Security') {
