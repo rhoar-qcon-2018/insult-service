@@ -134,15 +134,15 @@ items:
     name: '${project}'
   spec:
     ports:
-      - name: HTTP
+      - name: http
         port: 8080
         protocol: TCP
         targetPort: 8080
-      - name: JOLOKIA
+      - name: jolokia
         port: 8778
         protocol: TCP
         targetPort: 8778
-      - name: CLUSTER
+      - name: cluster
         port: 5800
         protocol: TCP
         targetPort: 5800
