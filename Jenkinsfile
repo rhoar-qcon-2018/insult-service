@@ -19,7 +19,8 @@ spec: {}
   }
 }
 
-def buildConfig = {project, namespace, buildSecret, fromImageStream = 'redhat-openjdk18-openshift:1.1' -> """
+def buildConfig = {project, namespace, buildSecret, fromImageStream = 'redhat-openjdk18-openshift:1.1' ->
+  def template = """
 ---
 apiVersion: build.openshift.io/v1
 kind: BuildConfig
@@ -56,7 +57,11 @@ spec:
     - generic:
         secret: ${buildSecret}
       type: Generic
-""" }
+"""
+  openshift.withCluster() {
+    openshift.apply(template, "--namespace=${namespace}")
+  }
+}
 
 pipeline {
   agent {
@@ -156,7 +161,7 @@ pipeline {
         stage('Create Binary BuildConfig') {
           steps {
             script {
-              openshift.apply(buildConfig(PROJECT_NAME, ciProject, UUID.randomUUID().toString()))
+              buildConfig(PROJECT_NAME, ciProject, UUID.randomUUID().toString())
             }
           }
         }
