@@ -102,6 +102,9 @@ items:
           - image: '${project}'
             imagePullPolicy: Always
             name: '${project}'
+            env:
+            - name: KUBERNETES_NAMESPACE
+              value: ${targetNamespace}
             ports:
               - containerPort: 5800
                 protocol: TCP
