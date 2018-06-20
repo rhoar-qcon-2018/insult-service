@@ -158,7 +158,7 @@ items:
     name: '${project}'
   spec:
     port:
-      targetPort: HTTP
+      targetPort: http
     to:
       kind: Service
       name: '${project}'
