@@ -56,7 +56,7 @@ pipeline {
           steps {
             script {
               def ciProject = openshift.project()
-              openshift.apply("imagestream", """
+              openshift.apply("""
 ---
 apiVersion: v1
 kind: ImageStream
@@ -65,8 +65,7 @@ metadata:
     build: '${PROJECT_NAME}'
   name: '${PROJECT_NAME}'
   namespace: '${ciProject}'
-spec: {}
-                """)
+spec: {}""")
             }
           }
         }
@@ -75,7 +74,7 @@ spec: {}
             script {
               def ciProject = openshift.project()
               def testProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-test')
-              openshift.apply("imagestream", """
+              openshift.apply("""
 ---
 apiVersion: v1
 kind: ImageStream
@@ -84,8 +83,7 @@ metadata:
     build: '${PROJECT_NAME}'
   name: '${PROJECT_NAME}'
   namespace: '${testProject}'
-spec: {}
-                """)
+spec: {}""")
             }
           }
         }
@@ -94,7 +92,7 @@ spec: {}
             script {
               def ciProject = openshift.project()
               def devProject = ciProject.replaceFirst(/^labs-ci-cd/, 'labs-dev')
-              openshift.apply("imagestream", """
+              openshift.apply("""
 ---
 apiVersion: v1
 kind: ImageStream
@@ -103,8 +101,7 @@ metadata:
     build: '${PROJECT_NAME}'
   name: '${PROJECT_NAME}'
   namespace: '${devProject}'
-spec: {}
-                """)
+spec: {}""")
             }
           }
         }
