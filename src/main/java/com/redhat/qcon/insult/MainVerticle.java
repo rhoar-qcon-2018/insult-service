@@ -137,6 +137,7 @@ public class MainVerticle extends AbstractVerticle {
         Router root = Router.router(vertx);
 
         CorsHandler corsHandler = CorsHandler.create("*")
+                .allowCredentials(false)
                 .allowedMethod(GET)
                 .allowedHeader("Access-Control-Request-Method")
                 .allowedHeader("Access-Control-Allow-Credentials")
