@@ -135,7 +135,7 @@ public class MainVerticle extends AbstractVerticle {
 
         Router root = Router.router(vertx);
 
-        CorsHandler corsHandler = CorsHandler.create("qcon\\.openshift\\.opentlc\\.com")
+        CorsHandler corsHandler = CorsHandler.create(".*")
                 .allowedHeader("Access-Control-Request-Method")
                 .allowedHeader("Access-Control-Allow-Origin")
                 .allowedHeader("Access-Control-Allow-Headers")
