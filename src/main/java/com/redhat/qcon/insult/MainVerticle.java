@@ -112,9 +112,15 @@ public class MainVerticle extends AbstractVerticle {
 
         // Map out OpenAPI3 route to our Service Proxy implementation
         factory.addHandlerByOperationId("getInsult",
-            ctx -> service.rxGetREST().toMaybe()
-                      .doOnError(e -> errorHandler(ctx, e))
-                      .subscribe(json -> sendResult(ctx, json)));
+                ctx -> service.rxGetREST().toMaybe()
+                        .doOnError(e -> errorHandler(ctx, e))
+                        .subscribe(json -> sendResult(ctx, json)));
+
+        // Map out OpenAPI3 route to our Service Proxy implementation
+        factory.addHandlerByOperationId("health",
+                ctx -> service.rxCheck().toMaybe()
+                        .doOnError(e -> errorHandler(ctx, e))
+                        .subscribe(json -> sendResult(ctx, json)));
 
         BridgeOptions bOpts = new BridgeOptions()
                 .addInboundPermitted(new PermittedOptions().setAddress("insult.service"))
@@ -123,12 +129,15 @@ public class MainVerticle extends AbstractVerticle {
 
         SockJSHandler sockHandler = SockJSHandler.create(vertx).bridge(bOpts);
 
-        Router router = factory.getRouter();
+        Router api = factory.getRouter();
 
-        router.route("/eventbus").handler(sockHandler);
+        Router root = Router.router(vertx);
+        root.mountSubRouter("/api/v1", api);
+
+        root.route("/eventbus").handler(sockHandler);
 
         return vertx.createHttpServer(httpOpts)
-                    .requestHandler(router::accept)
+                    .requestHandler(root::accept)
                     .rxListen()
                     .toMaybe();
     }
