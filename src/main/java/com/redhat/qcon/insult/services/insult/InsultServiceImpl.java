@@ -99,7 +99,8 @@ public class InsultServiceImpl implements InsultService {
                 insult.put("noun", item.getString("noun"));
             }
         }
-        insult.put("adjectives", adjectives);
+        insult.put("adj1", adjectives.getString(0));
+        insult.put("adj2", adjectives.getString(1));
 
         return Future.succeededFuture(insult);
     }

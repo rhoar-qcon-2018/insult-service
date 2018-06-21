@@ -56,18 +56,12 @@ components:
       type: object
       required:
       - noun
-      - adj
+      - adj1
+      - adj2
       properties:
         noun:
           type: string
-        adj:
-          type: array
-          items:
-            type: string
-    insultrequest:
-      type: object
-      required:
-      - name
-      properties:
-        name:
+        adj1:
+          type: string
+        adj2:
           type: string
