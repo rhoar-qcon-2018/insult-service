@@ -124,7 +124,9 @@ items:
             - name: KUBERNETES_NAMESPACE
               value: ${targetNamespace}
             - name: JAVA_OPTIONS
-              value: '-Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml -Djava.net.preferIPv4Stack=true'
+              value: |-
+                -Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml -Djava.net.preferIPv4Stack=true
+                -Dorg.slf4j.simpleLogger.log.org.jgroups=WARN -Dorg.slf4j.simpleLogger.log.org.infinispan=WARN
             - name: JAVA_ARGS
               value: '-cluster -cluster-port 5800'
             ports:
