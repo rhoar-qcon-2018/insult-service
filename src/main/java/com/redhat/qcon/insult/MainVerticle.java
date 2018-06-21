@@ -3,7 +3,6 @@ package com.redhat.qcon.insult;
 import com.redhat.qcon.insult.services.insult.InsultServiceImpl;
 import com.redhat.qcon.insult.services.reactivex.insult.InsultService;
 import io.reactivex.Maybe;
-import io.swagger.models.auth.In;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
@@ -152,7 +151,7 @@ public class MainVerticle extends AbstractVerticle {
 
         SockJSHandler sockHandler = SockJSHandler.create(vertx).bridge(bOpts);
 
-        root.routeWithRegex("/eventbus.*").handler(sockHandler);
+        root.route("/eventbus/*").handler(sockHandler);
 
         return vertx.createHttpServer(httpOpts)
                     .requestHandler(root::accept)
