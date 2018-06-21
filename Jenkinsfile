@@ -134,6 +134,26 @@ items:
                 protocol: TCP
               - containerPort: 8080
                 protocol: TCP
+            livenessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: /api/v1/health
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+            readinessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /api/v1/health
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 1
             resources: {}
             terminationMessagePath: /dev/termination-log
         dnsPolicy: ClusterFirst
