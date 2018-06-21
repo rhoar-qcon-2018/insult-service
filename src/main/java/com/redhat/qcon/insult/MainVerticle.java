@@ -124,13 +124,6 @@ public class MainVerticle extends AbstractVerticle {
                         .doOnError(e -> errorHandler(ctx, e))
                         .subscribe(json -> sendResult(ctx, json)));
 
-        BridgeOptions bOpts = new BridgeOptions()
-                .addInboundPermitted(new PermittedOptions().setAddress("insult.service"))
-                .addOutboundPermitted(new PermittedOptions().setAddress("kafka.service"))
-                .addOutboundPermitted(new PermittedOptions().setAddress("insult.service"));
-
-        SockJSHandler sockHandler = SockJSHandler.create(vertx).bridge(bOpts);
-
         Router api = factory.getRouter();
 
         Router root = Router.router(vertx);
@@ -152,7 +145,14 @@ public class MainVerticle extends AbstractVerticle {
 
         root.mountSubRouter("/api/v1", api);
 
-        root.route("/eventbus").handler(sockHandler);
+        BridgeOptions bOpts = new BridgeOptions()
+                .addInboundPermitted(new PermittedOptions().setAddress("insult.service"))
+                .addOutboundPermitted(new PermittedOptions().setAddress("kafka.service"))
+                .addOutboundPermitted(new PermittedOptions().setAddress("insult.service"));
+
+        SockJSHandler sockHandler = SockJSHandler.create(vertx).bridge(bOpts);
+
+        root.routeWithRegex("/eventbus.*").handler(sockHandler);
 
         return vertx.createHttpServer(httpOpts)
                     .requestHandler(root::accept)
