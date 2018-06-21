@@ -125,7 +125,7 @@ class InsultServiceImplSpec extends Specification {
                 conds.evaluate {
                     assert succeeded == res.succeeded()
                     def body = res?.result()
-                    assert body?.getJsonArray('adjectives')?.getAt(0) == adjective
+                    assert body?.getString('adj1') == adjective
                     assert body?.getString('noun') == noun
                 }
             })
