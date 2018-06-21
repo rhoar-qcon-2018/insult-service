@@ -7,6 +7,7 @@ import io.swagger.models.auth.In;
 import io.vertx.config.ConfigRetrieverOptions;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.Future;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.bridge.PermittedOptions;
@@ -17,6 +18,7 @@ import io.vertx.reactivex.core.http.HttpServer;
 import io.vertx.reactivex.ext.web.Router;
 import io.vertx.reactivex.ext.web.RoutingContext;
 import io.vertx.reactivex.ext.web.api.contract.openapi3.OpenAPI3RouterFactory;
+import io.vertx.reactivex.ext.web.handler.CorsHandler;
 import io.vertx.reactivex.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.serviceproxy.ServiceBinder;
 import io.vertx.serviceproxy.ServiceProxyBuilder;
@@ -26,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.vertx.core.http.HttpHeaders.*;
+import static io.vertx.core.http.HttpMethod.GET;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
 public class MainVerticle extends AbstractVerticle {
@@ -132,6 +135,17 @@ public class MainVerticle extends AbstractVerticle {
         Router api = factory.getRouter();
 
         Router root = Router.router(vertx);
+
+        CorsHandler corsHandler = CorsHandler.create("*")
+                .allowedMethod(GET)
+                .allowedHeader("Access-Control-Request-Method")
+                .allowedHeader("Access-Control-Allow-Credentials")
+                .allowedHeader("Access-Control-Allow-Origin")
+                .allowedHeader("Access-Control-Allow-Headers")
+                .allowedHeader("Content-Type");
+
+        root.route().handler(corsHandler);
+
         root.mountSubRouter("/api/v1", api);
 
         root.route("/eventbus").handler(sockHandler);
