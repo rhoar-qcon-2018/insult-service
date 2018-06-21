@@ -123,6 +123,8 @@ items:
             env:
             - name: KUBERNETES_NAMESPACE
               value: ${targetNamespace}
+            - name: JAVA_OPTS
+              value: '-Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml -Djava.net.preferIPv4Stack=true'
             - name: JAVA_ARGS
               value: '-cluster -cluster-port 5800'
             ports:
