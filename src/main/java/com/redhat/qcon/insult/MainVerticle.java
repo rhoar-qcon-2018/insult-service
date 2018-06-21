@@ -28,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.vertx.core.http.HttpHeaders.*;
-import static io.vertx.core.http.HttpMethod.GET;
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 
 public class MainVerticle extends AbstractVerticle {
@@ -136,14 +135,18 @@ public class MainVerticle extends AbstractVerticle {
 
         Router root = Router.router(vertx);
 
-        CorsHandler corsHandler = CorsHandler.create("*")
+        CorsHandler corsHandler = CorsHandler.create("qcon\\.openshift\\.opentlc\\.com")
                 .allowCredentials(false)
-                .allowedMethod(GET)
                 .allowedHeader("Access-Control-Request-Method")
-                .allowedHeader("Access-Control-Allow-Credentials")
                 .allowedHeader("Access-Control-Allow-Origin")
                 .allowedHeader("Access-Control-Allow-Headers")
-                .allowedHeader("Content-Type");
+                .allowedHeader("Content-Type")
+                .allowedMethod(HttpMethod.GET)
+                .allowedMethod(HttpMethod.POST)
+                .allowedMethod(HttpMethod.HEAD)
+                .allowedMethod(HttpMethod.PUT)
+                .allowedMethod(HttpMethod.OPTIONS)
+                .allowedMethod(HttpMethod.CONNECT);
 
         root.route().handler(corsHandler);
 
