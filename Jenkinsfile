@@ -123,6 +123,8 @@ items:
             env:
             - name: KUBERNETES_NAMESPACE
               value: ${targetNamespace}
+            - name: JAVA_ARGS
+              value: '-cluster -cluster-port 5800'
             ports:
               - containerPort: 5800
                 protocol: TCP
