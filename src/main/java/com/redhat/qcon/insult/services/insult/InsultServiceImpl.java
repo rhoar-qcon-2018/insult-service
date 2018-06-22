@@ -15,10 +15,14 @@ import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.HttpResponse;
 import io.vertx.reactivex.ext.web.client.WebClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.lang.String.format;
 
 public class InsultServiceImpl implements InsultService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(InsultServiceImpl.class);
 
     private static final int HTTP_CLIENT_TIMEOUT = 500;
     Vertx vertx;
@@ -61,9 +65,14 @@ public class InsultServiceImpl implements InsultService {
 
         nounBreaker = CircuitBreaker
                         .create("nounBreaker", Vertx.newInstance(vertx), breakerOpts)
-                        .openHandler(t -> new JsonObject().put("noun", "[open]"))
-                        .fallback(t -> new JsonObject().put("noun", "[failure]"))
+                        .openHandler(t -> circuitBreakerHandler("noun", "[open]"))
+                        .fallback(t -> circuitBreakerHandler("noun", "[failure]"))
                         .reset();
+    }
+
+    public JsonObject circuitBreakerHandler(String key, String value) {
+        LOG.error("Timeout requesting '{}', returned '{}'", key, value);
+        return new JsonObject().put(key, value);
     }
 
     /**
@@ -73,6 +82,7 @@ public class InsultServiceImpl implements InsultService {
     @Override
     public void getREST(Handler<AsyncResult<JsonObject>> insultGetHandler) {
         // Request 2 adjectives and a noun in parallel, then handle the results
+        LOG.info("Received request");
         CompositeFuture.all(getNoun(), getAdjective(), getAdjective())
                 .rxSetHandler()
                 .flatMapMaybe(InsultServiceImpl::mapResultToError)   // Map errors to an exception
@@ -114,6 +124,7 @@ public class InsultServiceImpl implements InsultService {
             adjClient.get("/api/v1/adjective")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
+                    .doOnError(e -> LOG.error("REST Request failed", e))
                     .flatMapMaybe(InsultServiceImpl::mapStatusToError)
                     .map(HttpResponse::bodyAsJsonObject)
                     .subscribe(fut::complete, fut::fail));
@@ -128,6 +139,7 @@ public class InsultServiceImpl implements InsultService {
             nounClient.get("/api/v1/noun")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
+                    .doOnError(e -> LOG.error("REST Request failed", e))
                     .flatMapMaybe(InsultServiceImpl::mapStatusToError)
                     .map(HttpResponse::bodyAsJsonObject)
                     .subscribe(fut::complete, fut::fail));
@@ -158,6 +170,9 @@ public class InsultServiceImpl implements InsultService {
         if (res.succeeded()) {
             return Maybe.just(res);
         } else {
+            for (int x=0; x<3; x++) {
+                LOG.error("Failed to request insult components", res.cause());
+            }
             return Maybe.error(res.cause());
         }
 
