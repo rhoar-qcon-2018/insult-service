@@ -16,6 +16,7 @@ import io.vertx.reactivex.core.Vertx;
 import io.vertx.reactivex.core.buffer.Buffer;
 import io.vertx.reactivex.ext.web.client.HttpResponse;
 import io.vertx.reactivex.ext.web.client.WebClient;
+import io.vertx.serviceproxy.ServiceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +92,7 @@ public class InsultServiceImpl implements InsultService {
                 .rxSetHandler()
                 .flatMapMaybe(InsultServiceImpl::mapResultToError)   // Map errors to an exception
                 .map(InsultServiceImpl::buildInsult)        // Combine the 3 results into a single JSON object
-                .onErrorReturn(Future::failedFuture)        // When an exception happens, map it to a failed future
+                .onErrorReturn(e -> Future.failedFuture(new ServiceException(1, e.getLocalizedMessage())))        // When an exception happens, map it to a failed future
                 .subscribe(insultGetHandler::handle);       // Map successful JSON to a succeeded future
     }
 
@@ -164,7 +165,7 @@ public class InsultServiceImpl implements InsultService {
         fut.setHandler(handler);
         kafka.rxPublish(insult)
                 .toObservable()
-                .doOnError(fut::fail)
+                .doOnError(e -> fut.fail(new ServiceException(2, e.getLocalizedMessage())))
                 .subscribe(v -> fut.completer());
         return this;
     }

@@ -117,13 +117,13 @@ public class MainVerticle extends AbstractVerticle {
 
         // Map out OpenAPI3 route to our Service Proxy implementation
         factory.addHandlerByOperationId("getInsult",
-                ctx -> service.rxGetREST().toMaybe()
+                ctx -> service.rxGetREST()
                         .doOnError(e -> errorHandler(ctx, e))
                         .subscribe(json -> sendResult(ctx, json)));
 
         // Map out OpenAPI3 route to our Service Proxy implementation
         factory.addHandlerByOperationId("health",
-                ctx -> service.rxCheck().toMaybe()
+                ctx -> service.rxCheck()
                         .doOnError(e -> errorHandler(ctx, e))
                         .subscribe(json -> sendResult(ctx, json)));
 
