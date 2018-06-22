@@ -73,13 +73,11 @@ public class InsultServiceImpl implements InsultService {
 
         adjBreaker = CircuitBreaker
                         .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
-                        .openHandler(t -> circuitBreakerHandler("adj", "[open]"))
-                        .fallback(t -> circuitBreakerHandler("adj", "[failure]"));
+                        .openHandler(t -> circuitBreakerHandler("adj", "[open]"));
 
         nounBreaker = CircuitBreaker
                         .create("nounBreaker", Vertx.newInstance(vertx), breakerOpts)
-                        .openHandler(t -> circuitBreakerHandler("noun", "[open]"))
-                        .fallback(t -> circuitBreakerHandler("noun", "[failure]"));
+                        .openHandler(t -> circuitBreakerHandler("noun", "[open]"));
     }
 
     public JsonObject circuitBreakerHandler(String key, String value) {
@@ -149,7 +147,7 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain an adjective on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getAdjective() {
-        return adjBreaker.execute(fut ->
+        return adjBreaker.executeWithFallback(fut ->
             webClient.get(adjPort, adjHost, "/api/v1/adjective")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
@@ -159,7 +157,8 @@ public class InsultServiceImpl implements InsultService {
                     .subscribe(
                             j -> fut.complete(j),
                             e -> fut.fail(e)
-                    )
+                    ),
+                t -> circuitBreakerHandler("adjective", "[failure]")
         );
     }
 
@@ -168,7 +167,7 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain a noun on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getNoun() {
-        return nounBreaker.execute(fut ->
+        return nounBreaker.executeWithFallback(fut ->
             webClient.get(nounPort, nounHost, "/api/v1/noun")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
@@ -178,7 +177,8 @@ public class InsultServiceImpl implements InsultService {
                     .subscribe(
                             j -> fut.complete(j),
                             e -> fut.fail(e)
-                    )
+                    ),
+                t -> circuitBreakerHandler("noun", "[failure]")
         );
     }
 
