@@ -24,6 +24,7 @@ import io.vertx.serviceproxy.ServiceProxyBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.redhat.qcon.kafka.MainVerticle.FAVORITES_EB_ADDRESS;
 import static io.netty.handler.codec.http.HttpResponseStatus.INTERNAL_SERVER_ERROR;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.vertx.core.http.HttpHeaders.*;
@@ -153,7 +154,8 @@ public class MainVerticle extends AbstractVerticle {
         BridgeOptions bOpts = new BridgeOptions()
                 .addInboundPermitted(new PermittedOptions().setAddress("insult.service"))
                 .addOutboundPermitted(new PermittedOptions().setAddress("kafka.service"))
-                .addOutboundPermitted(new PermittedOptions().setAddress("insult.service"));
+                .addOutboundPermitted(new PermittedOptions().setAddress("insult.service"))
+                .addOutboundPermitted(new PermittedOptions().setAddress(FAVORITES_EB_ADDRESS));
 
         SockJSHandler sockHandler = SockJSHandler.create(vertx).bridge(bOpts);
 
