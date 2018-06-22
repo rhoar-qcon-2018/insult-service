@@ -60,7 +60,7 @@ items:
     adjective: |-
       {
         "host": "adjective-service",
-        "port": 80
+        "port": 8080
       }
     http: |-
       {
@@ -70,7 +70,7 @@ items:
     noun: |-
       {
           "host": "noun-service",
-          "port": 80
+          "port": 8080
       }
   kind: ConfigMap
   metadata:
