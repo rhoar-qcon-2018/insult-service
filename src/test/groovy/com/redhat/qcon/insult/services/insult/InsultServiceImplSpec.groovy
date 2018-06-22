@@ -93,13 +93,13 @@ class InsultServiceImplSpec extends Specification {
         vertx = Vertx.vertx()
 
         httpClientConfig = new JsonObject()
-                .put('noun',
+            .put('noun',
                 new JsonObject().put('host', 'localhost')
                         .put('ssl', false)
                         .put('port', 80)
                         .put('proxyOptions', proxyOptions)
             )
-                .put('adjective',
+            .put('adjective',
                 new JsonObject().put('host', 'localhost')
                         .put('ssl', false)
                         .put('port', 80)

@@ -8,6 +8,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.ProxyOptions;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.reactivex.circuitbreaker.CircuitBreaker;
 import io.vertx.reactivex.core.CompositeFuture;
@@ -24,13 +25,14 @@ public class InsultServiceImpl implements InsultService {
 
     private static final Logger LOG = LoggerFactory.getLogger(InsultServiceImpl.class);
 
-    private static final int HTTP_CLIENT_TIMEOUT = 1000;
-    private static final int CIRCUIT_TIMEOUT = 500;
+    private static final int HTTP_CLIENT_TIMEOUT = 2000;
+    private static final int CIRCUIT_TIMEOUT = 1000;
     Vertx vertx;
     WebClient nounClient, adjClient;
     KafkaService kafka;
     CircuitBreaker adjBreaker;
     CircuitBreaker nounBreaker;
+    JsonObject config;
 
     /**
      * Default constructor
@@ -38,18 +40,21 @@ public class InsultServiceImpl implements InsultService {
      * @param config The {@link JsonObject} configuration for this service
      */
     public InsultServiceImpl(io.vertx.core.Vertx vertx, JsonObject config) {
+        this.config = config;
 
         kafka = KafkaService.createProxy(Vertx.newInstance(vertx), "kafka.service");
 
-        JsonObject nounConfig = config.getJsonObject("noun");
-        JsonObject adjConfig = config.getJsonObject("adjective");
         this.vertx = Vertx.newInstance(vertx);
-        WebClientOptions nounClientOpts = new WebClientOptions(nounConfig)
-                .setLogActivity(false);
-        WebClientOptions adjClientOpts = new WebClientOptions(adjConfig)
-                .setLogActivity(false);
-        nounClient = WebClient.create(this.vertx, nounClientOpts);
-        adjClient = WebClient.create(this.vertx, adjClientOpts);
+
+        ProxyOptions proxyOpts = new ProxyOptions(config
+                                                    .getJsonObject("noun")
+                                                    .getJsonObject("proxyOptions"));
+
+        WebClientOptions clientOpts = new WebClientOptions()
+                .setLogActivity(false)
+                .setProxyOptions(proxyOpts);
+        nounClient = WebClient.create(this.vertx, clientOpts);
+        adjClient = WebClient.create(this.vertx, clientOpts);
 
         CircuitBreakerOptions breakerOpts = new CircuitBreakerOptions()
                                                     .setFallbackOnFailure(true)
@@ -121,8 +126,10 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain an adjective on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getAdjective() {
+        String host = config.getJsonObject("adjective").getString("host");
+        int port = config.getJsonObject("adjective").getInteger("port");
         return adjBreaker.execute(fut ->
-            adjClient.get("/api/v1/adjective")
+            adjClient.get(port, host, "/api/v1/adjective")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
                     .doOnError(e -> LOG.error("REST Request failed", e))
@@ -136,8 +143,10 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain a noun on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getNoun() {
+        String host = config.getJsonObject("noun").getString("host");
+        int port = config.getJsonObject("noun").getInteger("port");
         return nounBreaker.execute(fut ->
-            nounClient.get("/api/v1/noun")
+            nounClient.get(port, host, "/api/v1/noun")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
                     .doOnError(e -> LOG.error("REST Request failed", e))
