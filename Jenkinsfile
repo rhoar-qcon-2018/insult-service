@@ -228,7 +228,7 @@ pipeline {
         }
         stage('Compile & Test') {
           steps {
-            sh 'mvn -T 2 package vertx:package'
+            sh 'mvn -T 2 package'
           }
         }
         stage('Ensure SonarQube Webhook is configured') {
@@ -266,7 +266,7 @@ pipeline {
       parallel {
         stage('Publish Artifacts') {
           steps {
-            sh 'mvn package vertx:package deploy:deploy -DskipTests -DaltDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/'
+            sh 'mvn package deploy:deploy -DskipTests -DaltDeploymentRepository=nexus::default::http://nexus:8081/repository/maven-snapshots/'
           }
         }
         stage('Create Binary BuildConfig') {
