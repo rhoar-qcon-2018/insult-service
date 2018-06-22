@@ -81,6 +81,8 @@ public class MainVerticle extends AbstractVerticle {
         // Merge the loaded configuration into the config for this Verticle
         loadedConfig = config().mergeIn(config);
 
+        LOG.info("Config Loaded: {}", loadedConfig.encodePrettily());
+
         // Instantiate the Insult Service and bind it to the event bus
         InsultServiceImpl nonRx = new InsultServiceImpl(vertx.getDelegate(), loadedConfig);
         new ServiceBinder(vertx.getDelegate())
