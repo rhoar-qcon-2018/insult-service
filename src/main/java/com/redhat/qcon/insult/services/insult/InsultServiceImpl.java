@@ -20,7 +20,7 @@ import static java.lang.String.format;
 
 public class InsultServiceImpl implements InsultService {
 
-    public static final int HTTP_CLIENT_TIMEOUT = 500;
+    private static final int HTTP_CLIENT_TIMEOUT = 500;
     Vertx vertx;
     WebClient nounClient, adjClient;
     KafkaService kafka;
@@ -51,7 +51,7 @@ public class InsultServiceImpl implements InsultService {
                                                     .setMaxFailures(3)
                                                     .setMaxRetries(3)
                                                     .setResetTimeout(15000)
-                                                    .setTimeout(500);
+                                                    .setTimeout(HTTP_CLIENT_TIMEOUT);
 
         adjBreaker = CircuitBreaker
                         .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
