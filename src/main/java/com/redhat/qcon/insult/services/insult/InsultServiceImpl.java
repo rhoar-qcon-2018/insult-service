@@ -51,7 +51,7 @@ public class InsultServiceImpl implements InsultService {
                                                     .setMaxFailures(3)
                                                     .setMaxRetries(3)
                                                     .setResetTimeout(15000)
-                                                    .setTimeout(250);
+                                                    .setTimeout(500);
 
         adjBreaker = CircuitBreaker
                         .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
