@@ -195,9 +195,7 @@ public class InsultServiceImpl implements InsultService {
         Future<Void> fut = Future.future();
         fut.setHandler(handler);
         kafka.rxPublish(insult)
-                .toObservable()
-                .doOnError(e -> fut.fail(new ServiceException(2, e.getLocalizedMessage())))
-                .subscribe(v -> fut.completer());
+                .subscribe(fut::complete, fut::fail);
         return this;
     }
 
