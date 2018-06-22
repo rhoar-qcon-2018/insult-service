@@ -38,47 +38,47 @@ class InsultServiceImplSpec extends Specification {
     JsonObject proxyOptions
 
     static final String NOUN_RESPONSE_BODY_ONE = new JsonObject().put('noun', 'noun').encodePrettily()
-    static final String ADJ_RESPONSE_BODY_ONE = new JsonObject().put('adj', 'adjective').encodePrettily()
+    static final String ADJ_RESPONSE_BODY_ONE = new JsonObject().put('adjective', 'adjective').encodePrettily()
 
     static final SimulationSource GET_RESP_ONE = dsl(
-            service('localhost')
+            service('noun-service')
                     .get("/api/v1/noun")
                     .willReturn(success(NOUN_RESPONSE_BODY_ONE,
                                         APPLICATION_JSON.toString())),
-            service('localhost')
+            service('adjective-service')
                     .get("/api/v1/adjective")
                     .willReturn(success(ADJ_RESPONSE_BODY_ONE,
                                         APPLICATION_JSON.toString())))
 
     static final SimulationSource GET_RESP_TWO = dsl(
-            service('localhost')
+            service('noun-service')
                     .get("/api/v1/noun")
                     .willReturn(serverError()),
-            service('localhost')
+            service('adjective-service')
                     .get("/api/v1/adjective")
                     .willReturn(serverError()))
 
     static final SimulationSource GET_RESP_THREE = dsl(
-            service('localhost')
+            service('noun-service')
                     .get('/api/v1/noun')
                     .willReturn(success(NOUN_RESPONSE_BODY_ONE,
                                         APPLICATION_JSON.toString())
-                                    .withDelay(1, TimeUnit.SECONDS)),
-            service('localhost')
+                                    .withDelay(10, TimeUnit.SECONDS)),
+            service('adjective-service')
                     .get("/api/v1/adjective")
                     .willReturn(success(ADJ_RESPONSE_BODY_ONE,
                                         APPLICATION_JSON.toString())))
 
     static final SimulationSource GET_RESP_FOUR = dsl(
-            service('localhost')
+            service('noun-service')
                     .get('/api/v1/noun')
                     .willReturn(success(NOUN_RESPONSE_BODY_ONE,
                                         APPLICATION_JSON.toString())),
-            service('localhost')
+            service('adjective-service')
                     .get("/api/v1/adjective")
                     .willReturn(success(ADJ_RESPONSE_BODY_ONE,
                                         APPLICATION_JSON.toString())
-                                    .withDelay(1, TimeUnit.SECONDS)))
+                                    .withDelay(10, TimeUnit.SECONDS)))
 
     @Shared
     JsonObject httpClientConfig
@@ -97,12 +97,12 @@ class InsultServiceImplSpec extends Specification {
 
         httpClientConfig = new JsonObject()
             .put('noun',
-                new JsonObject().put('host', 'localhost')
+                new JsonObject().put('host', 'noun-service')
                         .put('ssl', false)
                         .put('port', 80)
             )
             .put('adjective',
-                new JsonObject().put('host', 'localhost')
+                new JsonObject().put('host', 'adjective-service')
                         .put('ssl', false)
                         .put('port', 80)
             )
@@ -114,7 +114,7 @@ class InsultServiceImplSpec extends Specification {
     }
 
     @Unroll
-    def 'Test getting a noun: #description'() {
+    def 'Test getting an insult: #description'() {
         setup: 'Create the service under test'
             InsultServiceImpl underTest = new InsultServiceImpl(vertx, httpClientConfig)
 
@@ -136,12 +136,14 @@ class InsultServiceImplSpec extends Specification {
             })
 
         expect: 'The appropriate response to REST calls'
-            conds.await(10)
+            conds.await(15)
+            hoverfly.resetJournal()
+            hoverfly.reset()
 
         where: 'The following data is applied'
             simulation     | description       || succeeded | adjective   | noun
             GET_RESP_ONE   | 'Happy path'      || true      | 'adjective' | 'noun'
-            GET_RESP_TWO   | 'Server error'    || true      | '[failure]' | '[failure]'
+            GET_RESP_TWO   | 'Server error'    || false     | null        | null
             GET_RESP_THREE | 'Slow adj reply'  || true      | 'adjective' | '[failure]'
             GET_RESP_FOUR  | 'Slow noun reply' || true      | '[failure]' | 'noun'
     }

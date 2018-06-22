@@ -26,10 +26,10 @@ public class InsultServiceImpl implements InsultService {
 
     private static final Logger LOG = LoggerFactory.getLogger(InsultServiceImpl.class);
 
-    private static final int HTTP_CLIENT_TIMEOUT = 2000;
-    private static final int CIRCUIT_TIMEOUT = 1000;
+    private static final int HTTP_CLIENT_TIMEOUT = 1000;
+    private static final int CIRCUIT_TIMEOUT = 500;
     Vertx vertx;
-    WebClient nounClient, adjClient;
+    WebClient webClient;
     KafkaService kafka;
     CircuitBreaker adjBreaker;
     CircuitBreaker nounBreaker;
@@ -62,27 +62,24 @@ public class InsultServiceImpl implements InsultService {
         if (config.containsKey("proxyOptions")) {
             clientOpts.setProxyOptions(new ProxyOptions(config.getJsonObject("proxyOptions")));
         }
-        nounClient = WebClient.create(this.vertx, clientOpts);
-        adjClient = WebClient.create(this.vertx, clientOpts);
+        webClient = WebClient.create(this.vertx, clientOpts);
 
         CircuitBreakerOptions breakerOpts = new CircuitBreakerOptions()
                                                     .setFallbackOnFailure(true)
-                                                    .setMaxFailures(3)
-                                                    .setMaxRetries(3)
+                                                    .setMaxFailures(2)
+                                                    .setMaxRetries(2)
                                                     .setResetTimeout(15000)
                                                     .setTimeout(CIRCUIT_TIMEOUT);
 
         adjBreaker = CircuitBreaker
                         .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
-                        .openHandler(t -> new JsonObject().put("adj", "[open]"))
-                        .fallback(t -> new JsonObject().put("adj", "[failure]"))
-                        .reset();
+                        .openHandler(t -> circuitBreakerHandler("adj", "[open]"))
+                        .fallback(t -> circuitBreakerHandler("adj", "[failure]"));
 
         nounBreaker = CircuitBreaker
                         .create("nounBreaker", Vertx.newInstance(vertx), breakerOpts)
                         .openHandler(t -> circuitBreakerHandler("noun", "[open]"))
-                        .fallback(t -> circuitBreakerHandler("noun", "[failure]"))
-                        .reset();
+                        .fallback(t -> circuitBreakerHandler("noun", "[failure]"));
     }
 
     public JsonObject circuitBreakerHandler(String key, String value) {
@@ -153,7 +150,7 @@ public class InsultServiceImpl implements InsultService {
      */
     io.vertx.reactivex.core.Future<JsonObject> getAdjective() {
         return adjBreaker.execute(fut ->
-            adjClient.get(adjPort, adjHost, "/api/v1/adjective")
+            webClient.get(adjPort, adjHost, "/api/v1/adjective")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
                     .doOnError(e -> LOG.error("REST Request failed", e))
@@ -172,21 +169,15 @@ public class InsultServiceImpl implements InsultService {
      */
     io.vertx.reactivex.core.Future<JsonObject> getNoun() {
         return nounBreaker.execute(fut ->
-            nounClient.get(nounPort, nounHost, "/api/v1/noun")
+            webClient.get(nounPort, nounHost, "/api/v1/noun")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
                     .doOnError(e -> LOG.error("REST Request failed", e))
                     .flatMapMaybe(InsultServiceImpl::mapStatusToError)
                     .map(HttpResponse::bodyAsJsonObject)
                     .subscribe(
-                            j -> {
-                                LOG.info("Noun: {}", j.encodePrettily());
-                                fut.complete(j);
-                            },
-                            e -> {
-                                LOG.warn("Noun failure", e);
-                                fut.fail(e);
-                            }
+                            j -> fut.complete(j),
+                            e -> fut.fail(e)
                     )
         );
     }
