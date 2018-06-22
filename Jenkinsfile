@@ -50,6 +50,7 @@ spec:
     - generic:
         secret: ${buildSecret}
       type: Generic
+    - type: ConfigChange
 """
   openshift.withCluster() {
     openshift.apply(template, "--namespace=${namespace}")
