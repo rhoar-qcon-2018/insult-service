@@ -181,16 +181,19 @@ class InsultServiceImplSpec extends Specification {
             'Both breakers open'   | false      | OPEN      | OPEN
     }
 
-    def "Test mapResultToError happy path"() {
+    def "Test mapResultToError sad path"() {
         given: "Mock CompositeFuture"
-        def cf = Mock(CompositeFuture)
+            def cf = Mock(CompositeFuture)
 
         when: "Method under test is called"
-        def maybe = InsultServiceImpl.mapResultToError(cf)
-        assert maybe.isEmpty().blockingGet() == false
+            def maybe = InsultServiceImpl.mapResultToError(cf)
+            assert maybe.isEmpty().blockingGet() == true
 
         then:
-        1 * cf.succeeded() >> true
+            1 * cf.succeeded() >> false
+            1 * cf.cause(0) >> new Exception('Test1')
+            1 * cf.cause(1) >> new Exception('Test2')
+            1 * cf.cause(2) >> new Exception('Test3')
     }
 
     def cleanupSpec() {

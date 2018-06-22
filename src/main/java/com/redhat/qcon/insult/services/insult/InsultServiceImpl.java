@@ -174,7 +174,7 @@ public class InsultServiceImpl implements InsultService {
             for (int x=0; x<3; x++) {
                 LOG.error("Failed to request insult components", res.cause(x));
             }
-            return Maybe.error(res.cause());
+            return Maybe.empty();
         }
 
     }
