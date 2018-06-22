@@ -28,12 +28,15 @@ public class InsultServiceImpl implements InsultService {
 
     private static final int HTTP_CLIENT_TIMEOUT = 1000;
     private static final int CIRCUIT_TIMEOUT = 500;
+    private static final int RESET_TIMEOUT = 15000;
+
     Vertx vertx;
     WebClient webClient;
     KafkaService kafka;
     CircuitBreaker adjBreaker;
     CircuitBreaker nounBreaker;
     JsonObject config;
+
     private final String nounHost;
     private final int nounPort;
     private final String adjHost;
@@ -68,7 +71,7 @@ public class InsultServiceImpl implements InsultService {
                                                     .setFallbackOnFailure(true)
                                                     .setMaxFailures(2)
                                                     .setMaxRetries(2)
-                                                    .setResetTimeout(15000)
+                                                    .setResetTimeout(RESET_TIMEOUT)
                                                     .setTimeout(CIRCUIT_TIMEOUT);
 
         adjBreaker = CircuitBreaker
