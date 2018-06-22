@@ -34,6 +34,10 @@ public class InsultServiceImpl implements InsultService {
     CircuitBreaker adjBreaker;
     CircuitBreaker nounBreaker;
     JsonObject config;
+    private final String nounHost;
+    private final int nounPort;
+    private final String adjHost;
+    private final int adjPort;
 
     /**
      * Default constructor
@@ -44,6 +48,12 @@ public class InsultServiceImpl implements InsultService {
         this.config = config;
 
         kafka = KafkaService.createProxy(Vertx.newInstance(vertx), "kafka.service");
+
+        nounHost = config.getJsonObject("noun").getString("host");
+        nounPort = config.getJsonObject("noun").getInteger("port");
+
+        adjHost = config.getJsonObject("adjective").getString("host");
+        adjPort = config.getJsonObject("adjective").getInteger("port");
 
         this.vertx = Vertx.newInstance(vertx);
 
@@ -97,6 +107,23 @@ public class InsultServiceImpl implements InsultService {
     }
 
     /**
+     * When the {@link CompositeFuture} is failed, throws an exception in order to interrups the RxJava stream processing
+     * @param res The {@link CompositeFuture} to be processed
+     * @return The same as the input if the {@link CompositeFuture} was succeeded
+     */
+    static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) {
+        if (res.succeeded()) {
+            return Maybe.just(res);
+        } else {
+            for (int x=0; x<3; x++) {
+                LOG.error("Failed to request insult components", res.cause(x));
+            }
+            return Maybe.empty();
+        }
+
+    }
+
+    /**
      * Take results of {@link CompositeFuture} and return a composed {@link JsonObject} containing the insult components
      * @param cf An instance of {@link CompositeFuture} which MUST be succeeded, otherwise it would have been filtered
      * @return A {@link JsonObject} containing a noun and an array of adjectives.
@@ -108,8 +135,8 @@ public class InsultServiceImpl implements InsultService {
         // Because there is no garanteed order of the returned futures, we need to parse the results
         for (int i=0; i<cf.size(); i++) {
             JsonObject item = cf.resultAt(i);
-            if (item.containsKey("adj")) {
-                adjectives.add(item.getString("adj"));
+            if (item.containsKey("adjective")) {
+                adjectives.add(item.getString("adjective"));
             } else {
                 insult.put("noun", item.getString("noun"));
             }
@@ -125,16 +152,18 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain an adjective on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getAdjective() {
-        String host = config.getJsonObject("adjective").getString("host");
-        int port = config.getJsonObject("adjective").getInteger("port");
         return adjBreaker.execute(fut ->
-            adjClient.get(port, host, "/api/v1/adjective")
+            adjClient.get(adjPort, adjHost, "/api/v1/adjective")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
                     .doOnError(e -> LOG.error("REST Request failed", e))
                     .flatMapMaybe(InsultServiceImpl::mapStatusToError)
                     .map(HttpResponse::bodyAsJsonObject)
-                    .subscribe(fut::complete, fut::fail));
+                    .subscribe(
+                            j -> fut.complete(j),
+                            e -> fut.fail(e)
+                    )
+        );
     }
 
     /**
@@ -142,16 +171,24 @@ public class InsultServiceImpl implements InsultService {
      * @return A {@link Future} of type {@link JsonObject} which will contain a noun on success
      */
     io.vertx.reactivex.core.Future<JsonObject> getNoun() {
-        String host = config.getJsonObject("noun").getString("host");
-        int port = config.getJsonObject("noun").getInteger("port");
         return nounBreaker.execute(fut ->
-            nounClient.get(port, host, "/api/v1/noun")
+            nounClient.get(nounPort, nounHost, "/api/v1/noun")
                     .timeout(HTTP_CLIENT_TIMEOUT)
                     .rxSend()
                     .doOnError(e -> LOG.error("REST Request failed", e))
                     .flatMapMaybe(InsultServiceImpl::mapStatusToError)
                     .map(HttpResponse::bodyAsJsonObject)
-                    .subscribe(fut::complete, fut::fail));
+                    .subscribe(
+                            j -> {
+                                LOG.info("Noun: {}", j.encodePrettily());
+                                fut.complete(j);
+                            },
+                            e -> {
+                                LOG.warn("Noun failure", e);
+                                fut.fail(e);
+                            }
+                    )
+        );
     }
 
     /**
@@ -168,23 +205,6 @@ public class InsultServiceImpl implements InsultService {
                 .doOnError(e -> fut.fail(new ServiceException(2, e.getLocalizedMessage())))
                 .subscribe(v -> fut.completer());
         return this;
-    }
-
-    /**
-     * When the {@link CompositeFuture} is failed, throws an exception in order to interrups the RxJava stream processing
-     * @param res The {@link CompositeFuture} to be processed
-     * @return The same as the input if the {@link CompositeFuture} was succeeded
-     */
-    static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) {
-        if (res.succeeded()) {
-            return Maybe.just(res);
-        } else {
-            for (int x=0; x<3; x++) {
-                LOG.error("Failed to request insult components", res.cause(x));
-            }
-            return Maybe.empty();
-        }
-
     }
 
     /**

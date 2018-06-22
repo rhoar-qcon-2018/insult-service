@@ -105,8 +105,10 @@ public class MainVerticle extends AbstractVerticle {
         // Configure the HTTP Server options
         // - Listen on port 8080 on all interfaces using HTTP2 protocol
         HttpServerOptions httpOpts = new HttpServerOptions()
-                .setHost("0.0.0.0")
-                .setPort(8080)
+                .setHost(loadedConfig.getJsonObject("http").getString("address"))
+                .setPort(loadedConfig.getJsonObject("http").getInteger("port"))
+                .setReuseAddress(true)
+                .setSoLinger(0)
                 .setLogActivity(true);
 
         InsultService service = InsultService
