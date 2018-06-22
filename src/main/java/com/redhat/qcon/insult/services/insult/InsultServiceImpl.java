@@ -46,13 +46,11 @@ public class InsultServiceImpl implements InsultService {
 
         this.vertx = Vertx.newInstance(vertx);
 
-        ProxyOptions proxyOpts = new ProxyOptions(config
-                                                    .getJsonObject("noun")
-                                                    .getJsonObject("proxyOptions"));
-
         WebClientOptions clientOpts = new WebClientOptions()
-                .setLogActivity(false)
-                .setProxyOptions(proxyOpts);
+                .setLogActivity(false);
+        if (config.containsKey("proxyOptions")) {
+            clientOpts.setProxyOptions(new ProxyOptions(config.getJsonObject("proxyOptions")));
+        }
         nounClient = WebClient.create(this.vertx, clientOpts);
         adjClient = WebClient.create(this.vertx, clientOpts);
 
