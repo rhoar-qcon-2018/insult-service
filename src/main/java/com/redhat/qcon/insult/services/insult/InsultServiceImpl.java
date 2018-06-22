@@ -24,7 +24,8 @@ public class InsultServiceImpl implements InsultService {
 
     private static final Logger LOG = LoggerFactory.getLogger(InsultServiceImpl.class);
 
-    private static final int HTTP_CLIENT_TIMEOUT = 500;
+    private static final int HTTP_CLIENT_TIMEOUT = 1000;
+    private static final int CIRCUIT_TIMEOUT = 500;
     Vertx vertx;
     WebClient nounClient, adjClient;
     KafkaService kafka;
@@ -55,7 +56,7 @@ public class InsultServiceImpl implements InsultService {
                                                     .setMaxFailures(3)
                                                     .setMaxRetries(3)
                                                     .setResetTimeout(15000)
-                                                    .setTimeout(HTTP_CLIENT_TIMEOUT);
+                                                    .setTimeout(CIRCUIT_TIMEOUT);
 
         adjBreaker = CircuitBreaker
                         .create("adjBreaker", Vertx.newInstance(vertx), breakerOpts)
@@ -153,11 +154,11 @@ public class InsultServiceImpl implements InsultService {
     @Override
     public InsultService publish(JsonObject insult, Handler<AsyncResult<Void>> handler) {
         Future<Void> fut = Future.future();
-        handler.handle(fut);
+        fut.setHandler(handler);
         kafka.rxPublish(insult)
                 .toObservable()
                 .doOnError(fut::fail)
-                .subscribe(v -> fut.complete());
+                .subscribe(v -> fut.completer());
         return this;
     }
 
@@ -166,12 +167,12 @@ public class InsultServiceImpl implements InsultService {
      * @param res The {@link CompositeFuture} to be processed
      * @return The same as the input if the {@link CompositeFuture} was succeeded
      */
-    private static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) {
+    static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) {
         if (res.succeeded()) {
             return Maybe.just(res);
         } else {
             for (int x=0; x<3; x++) {
-                LOG.error("Failed to request insult components", res.cause());
+                LOG.error("Failed to request insult components", res.cause(x));
             }
             return Maybe.error(res.cause());
         }

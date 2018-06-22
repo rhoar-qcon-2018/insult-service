@@ -2,10 +2,11 @@ package com.redhat.qcon.insult.services.insult
 
 import io.specto.hoverfly.junit.core.Hoverfly
 import io.specto.hoverfly.junit.core.SimulationSource
-import io.vertx.circuitbreaker.CircuitBreakerState
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.reactivex.circuitbreaker.CircuitBreaker
+import io.vertx.reactivex.core.CompositeFuture
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -23,6 +24,7 @@ import static io.specto.hoverfly.junit.dsl.ResponseCreators.success
 import static io.vertx.circuitbreaker.CircuitBreakerState.*
 
 class InsultServiceImplSpec extends Specification {
+
     @Shared
     Hoverfly hoverfly
 
@@ -177,6 +179,18 @@ class InsultServiceImplSpec extends Specification {
             'Adj breaker open'     | false      | CLOSED    | OPEN
             'Noun breaker open'    | false      | OPEN      | CLOSED
             'Both breakers open'   | false      | OPEN      | OPEN
+    }
+
+    def "Test mapResultToError happy path"() {
+        given: "Mock CompositeFuture"
+        def cf = Mock(CompositeFuture)
+
+        when: "Method under test is called"
+        def maybe = InsultServiceImpl.mapResultToError(cf)
+        assert maybe.isEmpty().blockingGet() == false
+
+        then:
+        1 * cf.succeeded() >> true
     }
 
     def cleanupSpec() {
