@@ -42,11 +42,6 @@ public class MainVerticle extends AbstractVerticle {
                 ConfigStoreOptions defaultOpts = new ConfigStoreOptions().setType("file").setFormat("json")
                                 .setConfig(new JsonObject().put("path", "insult_default_config.json"));
 
-                // Load container specific configuration from a specific file path inside of the
-                // container
-                ConfigStoreOptions localConfig = new ConfigStoreOptions().setType("file").setFormat("json")
-                                .setConfig(new JsonObject().put("path", "/opt/docker_config.json")).setOptional(true);
-
                 // When running inside of Kubernetes, configure the application to also load
                 // from a ConfigMap. This config is ONLY loaded when running inside of
                 // Kubernetes or OpenShift
@@ -54,8 +49,9 @@ public class MainVerticle extends AbstractVerticle {
                                 .setConfig(new JsonObject().put("name", "insult-config").put("optional", true));
 
                 // Add the default and container config options into the ConfigRetriever
-                ConfigRetrieverOptions retrieverOptions = new ConfigRetrieverOptions().addStore(defaultOpts)
-                                .addStore(confOpts);
+                ConfigRetrieverOptions retrieverOptions = new ConfigRetrieverOptions()
+                                                                        .addStore(defaultOpts)
+                                                                        .addStore(confOpts);
 
                 // Create the ConfigRetriever and return the Maybe when complete
                 return ConfigRetriever.create(vertx, retrieverOptions).rxGetConfig().toMaybe();
