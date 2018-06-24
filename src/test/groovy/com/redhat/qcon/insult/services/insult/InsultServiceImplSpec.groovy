@@ -1,15 +1,12 @@
 package com.redhat.qcon.insult.services.insult
 
+import com.redhat.qcon.insult.services.InsultServiceImpl
 import io.specto.hoverfly.junit.core.Hoverfly
 import io.specto.hoverfly.junit.core.SimulationSource
-import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
-import io.vertx.core.net.ProxyOptions
-import io.vertx.ext.web.client.WebClientOptions
 import io.vertx.reactivex.circuitbreaker.CircuitBreaker
 import io.vertx.reactivex.core.CompositeFuture
-import io.vertx.reactivex.ext.web.client.WebClient
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll

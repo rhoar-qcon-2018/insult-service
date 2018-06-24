@@ -1,4 +1,4 @@
-package com.redhat.qcon.insult.services.insult;
+package com.redhat.qcon.insult.services;
 
 import com.redhat.qcon.kafka.services.reactivex.KafkaService;
 import io.reactivex.Maybe;

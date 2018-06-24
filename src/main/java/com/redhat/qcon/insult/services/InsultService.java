@@ -1,4 +1,4 @@
-package com.redhat.qcon.insult.services.insult;
+package com.redhat.qcon.insult.services;
 
 import io.vertx.codegen.annotations.Fluent;
 import io.vertx.codegen.annotations.ProxyGen;
