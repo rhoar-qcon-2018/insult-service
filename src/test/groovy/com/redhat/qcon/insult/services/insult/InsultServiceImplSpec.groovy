@@ -142,7 +142,7 @@ class InsultServiceImplSpec extends Specification {
             simulation     | description       || succeeded | adjective   | noun
             GET_RESP_ONE   | 'Happy path'      || true      | 'adjective' | 'noun'
             GET_RESP_TWO   | 'Server error'    || true      | '[failure]' | '[failure]'
-            GET_RESP_TWO   | 'Server error'    || true      | '[failure]' | '[failure]'
+            GET_RESP_THREE | 'Slow adj reply'  || true      | 'adjective' | '[failure]'
             GET_RESP_FOUR  | 'Slow noun reply' || true      | '[failure]' | 'noun'
     }
 
