@@ -2,3 +2,10 @@
 .idea/
 insult-service.iml
 target/
+.factorypath
+.classpath
+.project
+.vertx/
+.settings/
+.vs/
+.vscode/

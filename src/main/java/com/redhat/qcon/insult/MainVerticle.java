@@ -7,11 +7,12 @@ public class MainVerticle extends AbstractVerticle {
 
     @Override
     public void start(Future<Void> startFuture) {
-        /*
-         * vertx.createHttpServer().requestHandler(req -> {
-         * req.response().end("Hello World"); }).listen(8080);
-         */
-        startFuture.fail(new Exception("Not Implemented"));
+        vertx.createHttpServer().requestHandler(req -> req.response().end("Hello, World!")).listen(8080, res -> {
+            if (res.succeeded()) {
+                startFuture.complete();
+            } else {
+                startFuture.fail(res.cause());
+            }
+        });
     }
-
 }
