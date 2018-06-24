@@ -96,12 +96,17 @@ public class InsultServiceImpl implements InsultService {
     public void getREST(Handler<AsyncResult<JsonObject>> insultGetHandler) {
         // Request 2 adjectives and a noun in parallel, then handle the results
         LOG.info("Received request");
-        CompositeFuture.all(getNoun(), getAdjective(), getAdjective())
-                .rxSetHandler()
-                .flatMapMaybe(InsultServiceImpl::mapResultToError)   // Map errors to an exception
-                .map(InsultServiceImpl::buildInsult)        // Combine the 3 results into a single JSON object
-                .onErrorReturn(e -> Future.failedFuture(new ServiceException(1, e.getLocalizedMessage())))        // When an exception happens, map it to a failed future
-                .subscribe(insultGetHandler::handle);       // Map successful JSON to a succeeded future
+        Future<JsonObject> fut = Future.future();
+        fut.setHandler(insultGetHandler);
+        CompositeFuture
+            .all(getNoun(), getAdjective(), getAdjective())
+            .rxSetHandler()
+            .flatMapMaybe(InsultServiceImpl::mapResultToError)  // Map errors to an exception
+            .map(InsultServiceImpl::buildInsult)                // Combine the 3 results into a single JSON object
+            .subscribe(
+                fut::complete,                                  // Map successful JSON to a succeeded future
+                fut::fail                                       // Handle failed CompositeFuture
+            );
     }
 
     /**
@@ -109,16 +114,15 @@ public class InsultServiceImpl implements InsultService {
      * @param res The {@link CompositeFuture} to be processed
      * @return The same as the input if the {@link CompositeFuture} was succeeded
      */
-    static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) {
+    static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) throws ServiceException {
         if (res.succeeded()) {
             return Maybe.just(res);
         } else {
             for (int x=0; x<3; x++) {
                 LOG.error("Failed to request insult components", res.cause(x));
             }
-            return Maybe.empty();
+            throw new ServiceException(1, res.cause().getLocalizedMessage());
         }
-
     }
 
     /**
@@ -126,7 +130,7 @@ public class InsultServiceImpl implements InsultService {
      * @param cf An instance of {@link CompositeFuture} which MUST be succeeded, otherwise it would have been filtered
      * @return A {@link JsonObject} containing a noun and an array of adjectives.
      */
-    private static AsyncResult<JsonObject> buildInsult(CompositeFuture cf) {
+    private static JsonObject buildInsult(CompositeFuture cf) {
         JsonObject insult = new JsonObject();
         JsonArray adjectives = new JsonArray();
 
@@ -142,7 +146,7 @@ public class InsultServiceImpl implements InsultService {
         insult.put("adj1", adjectives.getString(0));
         insult.put("adj2", adjectives.getString(1));
 
-        return Future.succeededFuture(insult);
+        return insult;
     }
 
     /**
@@ -158,8 +162,8 @@ public class InsultServiceImpl implements InsultService {
                     .flatMapMaybe(InsultServiceImpl::mapStatusToError)
                     .map(HttpResponse::bodyAsJsonObject)
                     .subscribe(
-                            j -> fut.complete(j),
-                            e -> fut.fail(e)
+                            fut::complete,
+                            fut::fail
                     ),
                 t -> circuitBreakerHandler("adjective", "[failure]")
         );

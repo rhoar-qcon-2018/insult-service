@@ -7,6 +7,7 @@ import io.vertx.core.Vertx
 import io.vertx.core.json.JsonObject
 import io.vertx.reactivex.circuitbreaker.CircuitBreaker
 import io.vertx.reactivex.core.CompositeFuture
+import io.vertx.serviceproxy.ServiceException
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -188,13 +189,14 @@ class InsultServiceImplSpec extends Specification {
 
         when: "Method under test is called"
             def maybe = InsultServiceImpl.mapResultToError(cf)
-            assert maybe.isEmpty().blockingGet() == true
 
         then:
+            thrown ServiceException
             1 * cf.succeeded() >> false
             1 * cf.cause(0) >> new Exception('Test1')
             1 * cf.cause(1) >> new Exception('Test2')
             1 * cf.cause(2) >> new Exception('Test3')
+            1 * cf.cause() >> new Exception('ServiceException')
     }
 
     def cleanupSpec() {
