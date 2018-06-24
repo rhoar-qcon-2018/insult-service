@@ -10,10 +10,10 @@ public class MainVerticle extends AbstractVerticle {
     public void start(Future<Void> startFuture) {
         Router router = Router.router(vertx);
 
-        router.get("/api/v1/insult").handler(ctx -> {
-            ctx.response().putHeader("Content-Type", "application/json")
-                        .end("testinsult");
-        });
+        router.get("/api/v1/insult").handler(ctx ->
+            ctx.response()
+                    .putHeader("Content-Type", "application/json")
+                    .end("testinsult"));
 
         vertx.createHttpServer().requestHandler(router::accept).listen(8080, res -> {
             if (res.succeeded()) {
