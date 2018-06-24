@@ -33,6 +33,8 @@ import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 public class MainVerticle extends AbstractVerticle {
 
         private static final Logger LOG = LoggerFactory.getLogger(MainVerticle.class);
+        public static final String INSULT_SERVICE_ADDRESS = "insult.service";
+        public static final String INSULT_API_SPEC_YAML = "/insult-api-spec.yaml";
 
         JsonObject loadedConfig;
 
@@ -74,11 +76,11 @@ public class MainVerticle extends AbstractVerticle {
 
                 // Instantiate the Insult Service and bind it to the event bus
                 InsultServiceImpl nonRx = new InsultServiceImpl(vertx.getDelegate(), loadedConfig);
-                new ServiceBinder(vertx.getDelegate()).setAddress("insult.service")
+                new ServiceBinder(vertx.getDelegate()).setAddress(INSULT_SERVICE_ADDRESS)
                                 .register(com.redhat.qcon.insult.services.InsultService.class, nonRx);
 
                 // Create the OpenAPI3RouterFactory using the API specification YAML file
-                return OpenAPI3RouterFactory.rxCreate(vertx, "/insult-api-spec.yaml").toMaybe();
+                return OpenAPI3RouterFactory.rxCreate(vertx, INSULT_API_SPEC_YAML).toMaybe();
         }
 
         /**
@@ -96,7 +98,7 @@ public class MainVerticle extends AbstractVerticle {
                                 .setSoLinger(0).setLogActivity(true);
 
                 InsultService service = InsultService
-                                .newInstance(new ServiceProxyBuilder(vertx.getDelegate()).setAddress("insult.service")
+                                .newInstance(new ServiceProxyBuilder(vertx.getDelegate()).setAddress(INSULT_SERVICE_ADDRESS)
                                                 .build(com.redhat.qcon.insult.services.InsultService.class));
 
                 // Map out OpenAPI3 route to our Service Proxy implementation
@@ -104,8 +106,12 @@ public class MainVerticle extends AbstractVerticle {
                                 .doOnError(e -> errorHandler(ctx, e)).subscribe(json -> sendResult(ctx, json)));
 
                 // Map out OpenAPI3 route to our Service Proxy implementation
-                factory.addHandlerByOperationId("health", ctx -> service.rxCheck().doOnError(e -> errorHandler(ctx, e))
-                                .subscribe(json -> sendResult(ctx, json)));
+                factory.addHandlerByOperationId("health", ctx -> service.rxCheck()
+                                                                        .subscribe(
+                                                                                json -> sendResult(ctx, json),
+                                                                                e -> errorHandler(ctx, e)
+                                                                        )
+                                                );
 
                 Router api = factory.getRouter();
 
@@ -161,7 +167,12 @@ public class MainVerticle extends AbstractVerticle {
 
         @Override
         public void start(Future<Void> startFuture) {
-                initConfigRetriever().flatMap(this::provisionRouter).flatMap(this::provisionHttpServer)
-                                .doOnError(startFuture::fail).subscribe(c -> startFuture.complete());
+                initConfigRetriever()
+                        .flatMap(this::provisionRouter)
+                        .flatMap(this::provisionHttpServer)
+                        .subscribe(
+                                c -> startFuture.complete(),
+                                startFuture::fail
+                        );
         }
 }
