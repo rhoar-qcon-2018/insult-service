@@ -113,6 +113,7 @@ public class InsultServiceImpl implements InsultService {
      * When the {@link CompositeFuture} is failed, throws an exception in order to interrups the RxJava stream processing
      * @param res The {@link CompositeFuture} to be processed
      * @return The same as the input if the {@link CompositeFuture} was succeeded
+     * @throws ServiceException if any of the futures failed
      */
     static final Maybe<CompositeFuture> mapResultToError(CompositeFuture res) throws ServiceException {
         if (res.succeeded()) {
