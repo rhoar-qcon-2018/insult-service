@@ -38,9 +38,8 @@ spec:
   strategy:
     sourceStrategy:
       from:
-        kind: ImageStreamTag
+        kind: DockerImage
         name: '${fromImageStream}'
-        namespace: openshift
     type: Source
   successfulBuildsHistoryLimit: 5
 """
