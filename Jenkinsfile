@@ -11,7 +11,7 @@ openshift.withCluster() {
 
 def buildConfig = { project, namespace, buildSecret, fromImageStream ->
   if (!fromImageStream) {
-    fromImageStream = 'redhat-openjdk18-openshift:1.1'
+    fromImageStream = 'registry.access.redhat.com/redhat-openjdk-18/openjdk18-openshift'
   }
   def template = """
 ---
