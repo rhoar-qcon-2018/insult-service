@@ -36,7 +36,7 @@ objects:
     labels:
       build: '${APP_NAME}'
     name: '${APP_NAME}'
-    namespace: '${PIPELINES_NAMESPACE}'
+    namespace: '${PIPELINE_NAMESPACE}'
   spec: {}
 - apiVersion: v1
   kind: DeploymentConfig
@@ -70,7 +70,7 @@ objects:
             name: '${APP_NAME}'
             env:
             - name: KUBERNETES_NAMESPACE
-              value: ${PIPELINES_NAMESPACE}
+              value: ${NAMESPACE}
             - name: JAVA_OPTIONS
               value: |-
                 -Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml -Djava.net.preferIPv4Stack=true
