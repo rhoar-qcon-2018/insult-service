@@ -1,0 +1,161 @@
+---
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  template: vertx-app-deploy-template
+metadata:
+  annotations:
+    description: A template to deploy your Vert.x app with an HTTP endpoint
+    iconClass: icon-cube
+    openshift.io/display-name: Vert.x App Deploy Template
+    tags: vertx
+objects:
+- apiVersion: v1
+  data:
+    adjective: |-
+      {
+        "host": "adjective-service",
+        "port": 8080
+      }
+    http: |-
+      {
+        "address": "0.0.0.0",
+        "port": 8080
+      }
+    noun: |-
+      {
+          "host": "noun-service",
+          "port": 8080
+      }
+  kind: ConfigMap
+  metadata:
+    name: insult-config
+- apiVersion: v1
+  kind: ImageStream
+  metadata:
+    labels:
+      build: '${APP_NAME}'
+    name: '${APP_NAME}'
+    namespace: '${PIPELINES_NAMESPACE}'
+  spec: {}
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      app: '${APP_NAME}'
+    name: '${APP_NAME}'
+  spec:
+    replicas: 1
+    selector:
+      name: '${APP_NAME}'
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 600
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: '${APP_NAME}'
+      spec:
+        containers:
+          - image: '${APP_NAME}'
+            imagePullPolicy: Always
+            name: '${APP_NAME}'
+            env:
+            - name: KUBERNETES_NAMESPACE
+              value: ${PIPELINES_NAMESPACE}
+            - name: JAVA_OPTIONS
+              value: |-
+                -Dvertx.jgroups.config=default-configs/default-jgroups-kubernetes.xml -Djava.net.preferIPv4Stack=true
+                -Dorg.slf4j.simpleLogger.log.org.jgroups=WARN -Dorg.slf4j.simpleLogger.log.org.infinispan=WARN
+            - name: JAVA_ARGS
+              value: '-cluster -cluster-port 5800'
+            ports:
+              - containerPort: 5800
+                protocol: TCP
+              - containerPort: 8778
+                protocol: TCP
+              - containerPort: 8080
+                protocol: TCP
+            livenessProbe:
+                failureThreshold: 3
+                httpGet:
+                  path: /api/v1/health
+                  port: 8080
+                  scheme: HTTP
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                successThreshold: 1
+                timeoutSeconds: 1
+            readinessProbe:
+              failureThreshold: 3
+              httpGet:
+                path: /api/v1/health
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 10
+              periodSeconds: 10
+              successThreshold: 1
+              timeoutSeconds: 1
+            resources: {}
+            terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+      - type: ConfigChange
+      - imageChangeParams:
+          automatic: true
+          containerNames:
+            - '${APP_NAME}'
+          from:
+            kind: ImageStreamTag
+            name: '${APP_NAME}:latest'
+        type: ImageChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      name: '${APP_NAME}'
+    name: '${APP_NAME}'
+  spec:
+    ports:
+      - name: http
+        port: 8080
+        protocol: TCP
+        targetPort: 8080
+      - name: jolokia
+        port: 8778
+        protocol: TCP
+        targetPort: 8778
+      - name: cluster
+        port: 5800
+        protocol: TCP
+        targetPort: 5800
+    selector:
+      name: '${APP_NAME}'
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: Route
+  metadata:
+    labels:
+      name: '${APP_NAME}'
+    name: '${APP_NAME}'
+  spec:
+    port:
+      targetPort: http
+    to:
+      kind: Service
+      name: '${APP_NAME}'
+      weight: 100
+    wildcardPolicy: None
