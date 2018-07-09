@@ -1,0 +1,40 @@
+---
+apiVersion: template.openshift.io/v1
+kind: Template
+labels:
+  template: vertx-app-deploy-template
+metadata:
+  annotations:
+    description: A template to deploy your Vert.x app with an HTTP endpoint
+    iconClass: icon-cube
+    openshift.io/display-name: Vert.x App Deploy Template
+    tags: vertx
+objects:
+- apiVersion: build.openshift.io/v1
+  kind: BuildConfig
+  metadata:
+    labels:
+      build: ${APP_NAME}
+    name: ${APP_NAME}
+    namespace: ${PIPELINE_NAMESPACE}
+  spec:
+    failedBuildsHistoryLimit: 5
+    nodeSelector: null
+    output:
+      to:
+        kind: ImageStreamTag
+        name: '${APP_NAME}:latest'
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      binary: {}
+      type: Binary
+    strategy:
+      sourceStrategy:
+        from:
+          kind: ImageStreamTag
+          name: '${IMAGE_STREAM}'
+          namespace: openshift
+      type: Source
+    successfulBuildsHistoryLimit: 5
