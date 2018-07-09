@@ -15,14 +15,14 @@ def buildConfig = { project, namespace, buildSecret, fromImageStream ->
   }
   def template = new File('.openshift/templates/vertx-build.yaml').text
   openshift.withCluster() {
-    openshift.apply(openshift.process(template, '-p', "IMAGE_STREAM=${fromImageStream}"), "--namespace=${namespace}")
+    openshift.apply(openshift.process(template, '-p', "APP_NAME=${project}", '-p', "PIPELINE_NAMESPACE=${ciNamespace}" '-p', "IMAGE_STREAM=${fromImageStream}"), "--namespace=${namespace}")
   }
 }
 
 def deploymentConfig = {project, ciNamespace, targetNamespace ->
   def template = new File('.openshift/templates/vertx-deploy.yaml').text
   openshift.withCluster() {
-    openshift.apply(openshift.process(template, '-p', "APP_NAME=${project}", '-p', "PIPELINE_NAMESPACE=${ciNamespace}"), "--namespace=${targetNamespace}")
+    openshift.apply(openshift.process(template, '-p', "APP_NAME=${project}", '-p', "NAMESPACE=${targetNamespace}"), "--namespace=${targetNamespace}")
   }
 }
 
