@@ -15,7 +15,7 @@ def buildConfig = { project, namespace, buildSecret, fromImageStream ->
   }
   def template = new File('.openshift/templates/vertx-build.yaml').text
   openshift.withCluster() {
-    openshift.apply(oc process(template, '-p', "IMAGE_STREAM=${fromImageStream}"), "--namespace=${namespace}")
+    openshift.apply(openshift.process(template, '-p', "IMAGE_STREAM=${fromImageStream}"), "--namespace=${namespace}")
   }
 }
 
