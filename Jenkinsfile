@@ -15,7 +15,7 @@ def buildConfig = { APP_NAME, PIPELINE_NAMESPACE, IMAGE_STREAM ->
   }
   openshift.withCluster() {
     openshift.apply(openshift.process(
-      './.openshift/templates/vertx-build.yaml', 
+      readFile(file: './.openshift/templates/vertx-build.yaml'), 
       '-p', "APP_NAME=${APP_NAME}", 
       '-p', "PIPELINE_NAMESPACE=${PIPELINE_NAMESPACE}", 
       '-p', "IMAGE_STREAM=${IMAGE_STREAM}"), 
@@ -26,7 +26,7 @@ def buildConfig = { APP_NAME, PIPELINE_NAMESPACE, IMAGE_STREAM ->
 def deploymentConfig = {APP_NAME, PIPELINE_NAMESPACE, NAMESPACE ->
   openshift.withCluster() {
     openshift.apply(openshift.process(
-      './.openshift/templates/vertx-deploy.yaml', 
+    readFile(file: './.openshift/templates/vertx-deploy.yaml'), 
     '-p', "APP_NAME=${APP_NAME}", 
     '-p', "PIPELINE_NAMESPACE=${PIPELINE_NAMESPACE}", 
     '-p', "NAMESPACE=${NAMESPACE}"), 
