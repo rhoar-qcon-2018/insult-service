@@ -9,20 +9,22 @@ openshift.withCluster() {
   }
 }
 
-def buildConfig = { project, namespace, buildSecret, fromImageStream ->
-  if (!fromImageStream) {
-    fromImageStream = 'redhat-openjdk18-openshift:1.1'
+def buildConfig = { APP_NAME, PIPELINE_NAMESPACE, IMAGE_STREAM ->
+  if (!IMAGE_STREAM) {
+    IMAGE_STREAM = 'redhat-openjdk18-openshift:1.1'
   }
-  def template = new File('.openshift/templates/vertx-build.yaml').text
+  def templateIn = new File('.openshift/templates/vertx-build.yaml').text
+  def template = evaluate(/"$templateIn"/)
   openshift.withCluster() {
-    openshift.apply(openshift.process(template, '-p', "APP_NAME=${project}", '-p', "PIPELINE_NAMESPACE=${ciNamespace}", '-p', "IMAGE_STREAM=${fromImageStream}"), "--namespace=${namespace}")
+    openshift.apply(template, "--namespace=${PIPELINE_NAMESPACE}")
   }
 }
 
-def deploymentConfig = {project, ciNamespace, targetNamespace ->
-  def template = new File('.openshift/templates/vertx-deploy.yaml').text
+def deploymentConfig = {APP_NAME, PIPELINE_NAMESPACE, NAMESPACE ->
+  def templateIn = new File('.openshift/templates/vertx-deploy.yaml').text
+  def template = evaluate(/"$templateIn"/)
   openshift.withCluster() {
-    openshift.apply(openshift.process(template, '-p', "APP_NAME=${project}", '-p', "NAMESPACE=${targetNamespace}"), "--namespace=${targetNamespace}")
+    openshift.apply(template, "--namespace=${NAMESPACE}")
   }
 }
 
